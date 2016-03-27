@@ -1,93 +1,97 @@
 package io.fintrospect
 
-import com.twitter.finagle.http.Method.Get
-import com.twitter.finagle.http.path.{->, /, Path}
+import com.twitter.finagle.Service
+import com.twitter.finagle.http.path.{->, /, Path => FPath}
 import com.twitter.finagle.http.{Method, Request, Response}
-import com.twitter.finagle.{Filter, Service}
-import io.fintrospect.ModuleSpec.ModifyPath
+import com.twitter.util.Future
 import io.fintrospect.TTTypes.ReqParam
-import io.fintrospect.parameters.{Header, Parameter, PathParameter, Query, Retrieval, Validatable}
+import io.fintrospect.parameters.{Parameter, PathParameter, Retrieval, Validatable}
 
 object TTTypes {
-  type ReqParam[A] = Parameter with Retrieval[A, Request] with Validatable[A, Request]
+  type ReqParam[RA, VA] = Parameter with Retrieval[RA, Request] with Validatable[VA, Request]
 }
 
-trait ExplicitRouteSpec {
-  val params: Seq[Parameter with Retrieval[_, Request] with Validatable[_, Request]]
+abstract class SR {
+  def toPf(): PartialFunction[(Method, FPath), Service[Request, Response]]
 }
 
-case class ExplicitRouteSpec0(summary: String,
-                              description: Option[String]) extends ExplicitRouteSpec {
+case class IP0_R0(m: Method) {
+  def /[P0](p0: PathParameter[P0]) = IP1_R0(m, p0)
 
-  val params = Nil
-
-  def taking[A](rp: ReqParam[A]): ExplicitRouteSpec1[A] = ExplicitRouteSpec1(this, rp)
-
-  def at(method: Method) = new ExplicitIncompletePath0(this, method, identity)
-}
-
-case class ExplicitRouteSpec1[A](base: ExplicitRouteSpec0,
-                                 p0: ReqParam[A]) extends ExplicitRouteSpec {
-  val params = Seq(p0)
-
-  def at(method: Method) = {
-    val a = (request: Request) => p0 <-- request
-    new ExplicitIncompletePath0(this, method, identity)
-  }
-}
-
-abstract class ExplicitServerRoute[RQ, RS, R <: ExplicitRouteSpec](val routeSpec: R,
-                                                                   val method: Method,
-                                                                   pathFn: Path => Path,
-                                                                   val pathParams: PathParameter[_]*) {
-
-  def missingOrFailedFrom(request: Request) = routeSpec.params.map(_.validate(request)).collect { case Left(l) => l }
-
-  def matches(actualMethod: Method, basePath: Path, actualPath: Path) = actualMethod == method && actualPath == pathFn(basePath)
-
-  def toPf(filter: Filter[Request, Response, RQ, RS], basePath: Path): PartialFunction[(Method, Path), Service[Request, Response]]
-
-  def describeFor(basePath: Path): String = (pathFn(basePath).toString +: pathParams.map(_.toString())).mkString("/")
-}
-
-
-object ExplicitIncompletePath {
-  def apply[R <: ExplicitRouteSpec](routeSpec: R, method: Method): ExplicitIncompletePath0[R] = new ExplicitIncompletePath0(routeSpec, method, identity)
-}
-
-trait ExplicitIncompletePath {
-  type ModifyPath = Path => Path
-  val routeSpec: ExplicitRouteSpec
-  val method: Method
-  val pathFn: ModifyPath
-}
-
-class ExplicitIncompletePath0[R <: ExplicitRouteSpec](val routeSpec: R, val method: Method, val pathFn: ModifyPath) extends ExplicitIncompletePath {
-  def /(part: String) = new ExplicitIncompletePath0(routeSpec, method, pathFn = pathFn.andThen(_ / part))
-
-  def /[T](pp0: PathParameter[T]) = new ExplicitIncompletePath1(routeSpec, method, pathFn, pp0)
-
-  def bindTo[RQ, RS](svc: Service[RQ, RS]): ExplicitServerRoute[RQ, RS, R] = bindTo(() => svc)
-
-  def bindTo[RQ, RS](fn: () => Service[RQ, RS]): ExplicitServerRoute[RQ, RS, R] = new ExplicitServerRoute[RQ, RS, R](routeSpec, method, pathFn) {
-    override def toPf(filter: Filter[Request, Response, RQ, RS], basePath: Path) = {
-      case actualMethod -> path if matches(actualMethod, basePath, path) => filter.andThen(fn())
+  def bindTo(svc: () => Future[Response]): SR = new SR {
+    override def toPf() = {
+      case actualMethod -> path => Service.mk { r: Request => svc() }
     }
   }
 }
 
-class ExplicitIncompletePath1[A, R <: ExplicitRouteSpec](val routeSpec: R, val method: Method, val pathFn: ModifyPath,
-                                                         pp1: PathParameter[A]) extends ExplicitIncompletePath {
+case class IP1_R0[P0](m: Method, p0: PathParameter[P0]) {
+  def /[P1](p1: PathParameter[P1]) = IP2_R0(m, p0, p1)
 
-  def bindTo[RQ, RS](fn: (A) => Service[RQ, RS]): ExplicitServerRoute[RQ, RS, R] = new ExplicitServerRoute[RQ, RS, R](routeSpec, method, pathFn, pp1) {
-    override def toPf(filter: Filter[Request, Response, RQ, RS], basePath: Path) = {
-      case actualMethod -> path / pp1(s1) if matches(actualMethod, basePath, path) => filter.andThen(fn(s1))
+  def bindTo(fn: P0 => Future[Response]) = new SR {
+    override def toPf() = {
+      case actualMethod -> path / p0(s1) => Service.mk { r: Request => fn(s1) }
     }
   }
 }
 
-object TheTest {
-  ExplicitRouteSpec0("", null)
-    .taking(Header.required.string("bob"))
-    .at(Get)
+case class IP2_R0[P0, P1](m: Method, p0: PathParameter[P0], p1: PathParameter[P1]) {
+  def bindTo(fn: (P0, P1) => Future[Response]) = new SR {
+    override def toPf() = {
+      case actualMethod -> path / p0(s1) / p1(s2) => Service.mk { r: Request => fn(s1, s2) }
+    }
+  }
+}
+
+case class IP0_Rn[R, -T <: Rn[R]](m: Method, rn: Request => R) {
+  def /[P0](p0: PathParameter[P0]) = IP1_Rn[P0, R, T](m, p0, rn)
+
+  def bindTo(fn: R => Future[Response]): SR = new SR {
+    override def toPf() = {
+      case actualMethod -> path => Service.mk { r: Request => fn(rn(r)) }
+    }
+  }
+}
+
+case class IP1_Rn[P0, R, -T <: Rn[R]](m: Method, p0: PathParameter[P0], rn: Request => R) {
+  def /[P1](p1: PathParameter[P1]) = IP2_Rn[P0, P1, R, T](m, p0, p1, rn)
+
+  def bindTo(fn: P0 => R => Future[Response]) = new SR {
+    override def toPf() = {
+      case actualMethod -> path / p0(s0) => Service.mk { r: Request => fn(s0)(rn(r)) }
+    }
+  }
+}
+
+case class IP2_Rn[P0, P1, R, -T <: Rn[R]](m: Method, p0: PathParameter[P0], p1: PathParameter[P1], rn: Request => R) {
+  def bindTo(fn: P0 => P1 => R => Future[Response]) = new SR {
+    override def toPf() = {
+      case actualMethod -> path / p0(s0) / p1(s1) => Service.mk { r: Request => fn(s0)(s1)(rn(r)) }
+    }
+  }
+}
+
+case class RS0(name: String) {
+  def taking[RA, VA](r0: ReqParam[RA, VA]): RS1[RA, VA] = RS1[RA, VA](name, r0)
+
+  def at(m: Method) = IP0_R0(m)
+}
+
+trait Rn[T] {
+  def fn(r: Request): T
+}
+
+case class RS1[RA, VA](name: String, ra: ReqParam[RA, VA]) extends Rn[RA] {
+
+  def taking[RB, VB](rb: ReqParam[RB, VB]) = RS2(name, ra, rb)
+
+  def at(m: Method): IP0_Rn[RA, RS1[RA, VA]] = IP0_Rn[RA, RS1[RA, VA]](m, ra.from)
+
+  override def fn(r: Request): RA = ra <-- r
+}
+
+case class RS2[RA, VA, RB, VB](name: String, ra: ReqParam[RA, VA], rb: ReqParam[RB, VB]) extends Rn[(RA, RB)] {
+  def at(m: Method) = IP0_Rn[(RA, RB), RS2[RA, VA, RB, VB]](m, fn)
+
+  override def fn(r: Request): (RA, RB) = (ra <-- r, rb <-- r)
 }
