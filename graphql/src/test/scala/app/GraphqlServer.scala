@@ -1,12 +1,13 @@
 package app
 
-import com.twitter.finagle.http.Method.Get
+import com.twitter.finagle.http.Method.{Get, Post}
 import com.twitter.finagle.http.Request
 import com.twitter.finagle.http.filter.Cors
 import com.twitter.finagle.http.filter.Cors.HttpFilter
 import com.twitter.finagle.http.path.Root
 import com.twitter.finagle.{Http, Service}
 import io.fintrospect.Module.{combine, toService}
+import io.fintrospect.formats.json.Json4s
 import io.fintrospect.parameters.{ParameterSpec, Query}
 import io.fintrospect.{ModuleSpec, RouteSpec, StaticModule}
 import models.SchemaDefinition
@@ -18,16 +19,6 @@ import scala.language.reflectiveCalls
 object GraphQLServer extends App {
 
   val jsonLibrary = io.fintrospect.formats.json.Json4s.Native
-
-
-  //  def index = Action {
-  //    Ok(views.html.index(googleAnalyticsCode,defaultGraphQLUrl))
-  //  }
-  //
-  //  def graphiql = Action {
-  //    Ok(views.html.graphiql(googleAnalyticsCode))
-  //  }
-
 
   private val query = Query.required(ParameterSpec.string("query").map(QueryParser.parse(_).get))
   private val variables = Query.optional.json("variables", "", jsonLibrary.JsonFormat)
@@ -66,13 +57,24 @@ object GraphQLServer extends App {
   //    executeQuery(query, variables, operation)
   //  }
 
-  //  def renderSchema = Action {
-  //    Status.Ok(SchemaRenderer.renderSchema(SchemaDefinition.StarWarsSchema))
-  //  }
+
+  val body = Json4s.Native.JsonFormat.body[GQL]()
+
+  val postQuery = RouteSpec().body(body).at(Post) / "graphql" bindTo Service.mk {
+    req: Request =>
+
+      val q = body <-- req
+      new QueryExecutor().execute(
+        GraphQLQuery(
+          QueryParser.parse(q.query).get,
+          None,
+          q.operation.map(Operation)))
+  }
 
   val graphQLModule = ModuleSpec(Root, new GraphQLModuleRenderer(SchemaDefinition.StarWarsSchema))
-    .withDescriptionPath(_ / "renderSchema")
+    .withDescriptionPath(_ / "render-schema")
     .withRoute(getQuery)
+    .withRoute(postQuery)
 
   val overallSvc = toService(combine(StaticModule(Root, "public"), graphQLModule))
 
