@@ -7,9 +7,9 @@ import com.twitter.finagle.http.filter.Cors.HttpFilter
 import com.twitter.finagle.http.path.Root
 import com.twitter.finagle.{Http, Service}
 import io.fintrospect.Module.{combine, toService}
-import io.fintrospect.formats.json.Json4s
+import io.fintrospect.formats.Json4s
 import io.fintrospect.parameters.{ParameterSpec, Query}
-import io.fintrospect.{ModuleSpec, RouteSpec, StaticModule}
+import io.fintrospect.{ModuleSpec, ResourceLoader, RouteSpec, StaticModule}
 import models.SchemaDefinition
 import sangria.parser.QueryParser
 
@@ -18,7 +18,7 @@ import scala.language.reflectiveCalls
 
 object GraphQLServer extends App {
 
-  val jsonLibrary = io.fintrospect.formats.json.Json4s.Native
+  val jsonLibrary = io.fintrospect.formats.Json4s
 
   private val query = Query.required(ParameterSpec.string("query").map(QueryParser.parse(_).get))
   private val variables = Query.optional.json("variables", "", jsonLibrary.JsonFormat)
@@ -58,7 +58,7 @@ object GraphQLServer extends App {
   //  }
 
 
-  val body = Json4s.Native.JsonFormat.body[GQL]()
+  val body = Json4s.JsonFormat.body[GQL]()
 
   val postQuery = RouteSpec().body(body).at(Post) / "graphql" bindTo Service.mk {
     req: Request =>
@@ -76,7 +76,7 @@ object GraphQLServer extends App {
     .withRoute(getQuery)
     .withRoute(postQuery)
 
-  val overallSvc = toService(combine(StaticModule(Root, "public"), graphQLModule))
+  val overallSvc = toService(combine(StaticModule(Root, ResourceLoader.Classpath("public")), graphQLModule))
 
   Http.serve(":9000", new HttpFilter(Cors.UnsafePermissivePolicy).andThen(overallSvc))
 

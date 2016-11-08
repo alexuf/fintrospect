@@ -2,10 +2,10 @@ package app
 
 import com.twitter.finagle.http.path.Path
 import com.twitter.finagle.http.{Response, Status}
-import io.fintrospect.ServerRoute
 import io.fintrospect.formats.PlainText.ResponseBuilder.implicits._
-import io.fintrospect.parameters.{InvalidParameter, Security}
 import io.fintrospect.renderers.ModuleRenderer
+import io.fintrospect.util.ExtractionError
+import io.fintrospect.{Security, ServerRoute}
 import sangria.renderer.SchemaRenderer
 
 class GraphQLModuleRenderer(schema: sangria.schema.Schema[_, _]) extends ModuleRenderer {
@@ -14,7 +14,7 @@ class GraphQLModuleRenderer(schema: sangria.schema.Schema[_, _]) extends ModuleR
     Status.Ok(SchemaRenderer.renderSchema(schema))
   }
 
-  override def badRequest(badParameters: Seq[InvalidParameter]): Response = {
+  override def badRequest(badParameters: Seq[ExtractionError]): Response = {
     Status.BadRequest(badParameters.toString())
   }
 }
