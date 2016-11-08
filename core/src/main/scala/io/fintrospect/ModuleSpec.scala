@@ -6,10 +6,10 @@ import com.twitter.finagle.http.path.Path
 import com.twitter.finagle.http.{Method, Request, Response}
 import com.twitter.finagle.{Filter, Service}
 import com.twitter.util.Future
+import io.fintrospect.Module.ServiceBinding
 import io.fintrospect.ModuleSpec.ModifyPath
-import io.fintrospect.parameters.{ExtractionFailed, InvalidParameter, NoSecurity, Security}
 import io.fintrospect.renderers.ModuleRenderer
-import io.fintrospect.types.ServiceBinding
+import io.fintrospect.util.{ExtractionError, ExtractionFailed}
 
 import scala.PartialFunction.empty
 
@@ -22,7 +22,7 @@ object ModuleSpec {
   def apply(basePath: Path): ModuleSpec[Request, Response] = apply(basePath, new ModuleRenderer {
     override def description(basePath: Path, security: Security, routes: Seq[ServerRoute[_, _]]): Response = Response(NotFound)
 
-    override def badRequest(badParameters: Seq[InvalidParameter]): Response = Response(BadRequest)
+    override def badRequest(badParameters: Seq[ExtractionError]): Response = Response(BadRequest)
 
     override def notFound(request: Request): Response = Response(NotFound)
   })
@@ -62,7 +62,7 @@ class ModuleSpec[RQ, RS] private(basePath: Path,
       }
   }
 
-  override protected def serviceBinding: ServiceBinding =
+  override protected[fintrospect] def serviceBinding: ServiceBinding =
     withDefault(routes.foldLeft(empty[(Method, Path), Service[Request, Response]]) {
       (currentBinding, route) =>
         val filter = identify(route).andThen(security.filter).andThen(validationFilter(route)).andThen(moduleFilter)
@@ -94,7 +94,7 @@ class ModuleSpec[RQ, RS] private(basePath: Path,
   def withRoutes(newRoutes: Iterable[ServerRoute[RQ, RS]]*): ModuleSpec[RQ, RS] = newRoutes.flatten.foldLeft(this)(_.withRoute(_))
 
   private def withDefault(otherRoutes: ServiceBinding): ServiceBinding = {
-    val descriptionRoute = new IncompletePath0(RouteSpec("Description route"), Get, descriptionRoutePath) bindTo {
+    val descriptionRoute = new UnboundRoute0(RouteSpec("Description route"), Get, descriptionRoutePath) bindTo {
       Service.mk { r: Request => Future.value(moduleRenderer.description(basePath, security, routes)) }
     }
 

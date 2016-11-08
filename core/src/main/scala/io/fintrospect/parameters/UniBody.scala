@@ -1,8 +1,9 @@
 package io.fintrospect.parameters
 
 import com.twitter.finagle.http.Message
-import io.fintrospect.parameters.InvalidParameter.Invalid
-import io.fintrospect.util.HttpRequestResponseUtil.contentFrom
+import com.twitter.io.Buf.ByteArray.Shared
+import io.fintrospect.util.ExtractionError.Invalid
+import io.fintrospect.util.{Extracted, Extraction, ExtractionFailed}
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names
 
 import scala.util.{Failure, Success, Try}
@@ -17,9 +18,7 @@ import scala.util.{Failure, Success, Try}
 class UniBody[T](spec: BodySpec[T],
                  theParamType: ParamType,
                  theExample: Option[T])
-  extends Body(spec)
-  with Bindable[T, RequestBinding]
-  with MandatoryRebind[Message, T, RequestBinding] {
+  extends Body(spec) {
 
   private val param = new BodyParameter with Bindable[T, RequestBinding] {
     override val required = true
@@ -32,11 +31,11 @@ class UniBody[T](spec: BodySpec[T],
       val content = spec.serialize(value)
       t.headerMap.add(Names.CONTENT_TYPE, spec.contentType.value)
       t.headerMap.add(Names.CONTENT_LENGTH, content.length.toString)
-      t.setContentString(content)
+      t.content = content
       t
     }))
 
-    override val example = theExample.map(spec.serialize)
+    override val example = theExample.map(spec.serialize).map(b => new String(Shared.extract(b)))
   }
 
   override def -->(value: T) = param.of(value)
@@ -44,8 +43,8 @@ class UniBody[T](spec: BodySpec[T],
   override def iterator = Iterator(param)
 
   override def <--?(message: Message): Extraction[T] =
-    Try(spec.deserialize(contentFrom(message))) match {
-      case Success(v) => Extracted(v)
+    Try(spec.deserialize(message.content)) match {
+      case Success(v) => Extracted(Some(v))
       case Failure(_) => ExtractionFailed(Invalid(param))
     }
 }

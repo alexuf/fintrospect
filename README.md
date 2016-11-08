@@ -1,4 +1,4 @@
-<b>Important note for upgraders from v`12.X.X` and below to v`13.0.0`. Fintrospect has changed top-level Maven group name to `io.fintrospect`. Please refer to the  <a href="http://fintrospect.io/changelog">changelog</a> for upgrade notes</b>.
+<b>Important note for upgraders from v`12.X.X` and below to v`13.X.X`. Fintrospect has changed top-level Maven group name to `io.fintrospect`. Please refer to the  <a href="http://fintrospect.io/changelog">changelog</a> for upgrade notes</b>.
 
 <h1>
 <a href="http://fintrospect.io">Fintrospect</a>&nbsp;&nbsp;&nbsp;
@@ -26,9 +26,12 @@ Additionally, Fintrospect provides a number of mechanisms to leverage these rout
   <a href="https://github.com/travisbrown/circe">Circe</a>, <a href="https://github.com/google/gson">GSON</a>, 
   <a href="http://json4s.org/">Json4S</a>, <a href="https://github.com/playframework">Play JSON</a>, 
   <a href="https://github.com/spray/spray-json">Spray JSON</a>
+    - Auto-marshaling of case classes instances to/from JSON (for `Argonaut`/`Circe`/`Json4S`/`Play`).
+    - Implement simple `PATCH`/`PUT` endpoints of case class instances (`Circe` only).
   - Native implementations of XML, Plain Text, HTML, XHTML
-- Serve static files from the classpath
-- Template ```View``` support for building responses with <a href="http://mustache.github.io/">Mustache</a> or <a href="http://handlebarsjs.com">Handlebars</a>
+  - <a href="http://msgpack.org">MsgPack</a> binary format
+- Serve static content from the classpath or a directory
+- Template ```View``` support (with Hot-Reloading) for building responses with <a href="http://mustache.github.io/">Mustache</a> or <a href="http://handlebarsjs.com">Handlebars</a>
 - Anonymising headers for dynamic-path based endpoints, removing all dynamic path elements. This allows, for example, calls to particular endpoints to be grouped for metric purposes. e.g. 
 ```/search/author/rowling``` becomes ```/search/author/{name}```
 - Interacts seamlessly with other Finagle based libraries, such as <a href="https://github.com/finagle/finagle-oauth2">Finagle OAuth2</a> 
@@ -39,10 +42,10 @@ Fintrospect is intentionally dependency-lite by design - other than Finagle, the
 
 To activate some optional features, additional dependencies may be required - please see <a href="http://fintrospect.io/installation">here</a> for details.
 
-Add the following lines to ```build.sbt``` - the lib also hosted in Maven Central, but we prefer Bintray):
+Add the following lines to ```build.sbt``` - the lib is hosted in Maven Central and JCenter:
 ```scala
 resolvers += "JCenter" at "https://jcenter.bintray.com"
-libraryDependencies += "io.fintrospect" %% "fintrospect-core" % "13.0.0"
+libraryDependencies += "io.fintrospect" %% "fintrospect-core" % "13.10.1"
 ```
 
 ## See the code
@@ -61,8 +64,8 @@ example response object, which will be broken down to provide the JSON model for
 
 ```scala
 // implicit conversion from Status -> ResponseBuilder pulled in here
-import io.fintrospect.formats.json.Argo.ResponseBuilder.implicits._
-import io.fintrospect.formats.json.Argo.JsonFormat.array
+import io.fintrospect.formats.Argo.ResponseBuilder.implicits._
+import io.fintrospect.formats.Argo.JsonFormat.array
 
 class BookSearch(books: Books) {
   private val maxPages = Query.optional.int("maxPages", "max number of pages in book")

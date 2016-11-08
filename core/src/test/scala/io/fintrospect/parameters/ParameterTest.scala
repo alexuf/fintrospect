@@ -1,19 +1,19 @@
 package io.fintrospect.parameters
 
 import com.twitter.finagle.http.Request
-import org.scalatest.{FunSpec, ShouldMatchers}
+import org.scalatest.{FunSpec, Matchers}
 
 import scala.language.reflectiveCalls
 
-class ParameterTest extends FunSpec with ShouldMatchers {
+class ParameterTest extends FunSpec with Matchers {
 
   describe("Parameter") {
     it("toString is descriptive") {
-      Header.required.bigDecimal("paramName").toString shouldEqual "Parameter(name=paramName,where=header,paramType=number)"
+      Header.required.bigDecimal("paramName").toString shouldBe "Mandatory parameter paramName (number) in header"
     }
 
     it("custom type") {
-      Query.required(MyCustomType) <-- Request("/?name=55") shouldEqual MyCustomType(55)
+      Query.required(MyCustomType) <-- Request("/?name=55") shouldBe MyCustomType(55)
     }
   }
 

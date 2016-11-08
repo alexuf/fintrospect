@@ -5,17 +5,17 @@ import com.twitter.finagle.http.path.Root
 import com.twitter.finagle.http.{Request, Status}
 import com.twitter.util.{Await, Future}
 import io.fintrospect.ContentTypes.{APPLICATION_ATOM_XML, APPLICATION_JSON, APPLICATION_SVG_XML}
-import io.fintrospect.formats.json.Argo
-import io.fintrospect.formats.json.Argo.JsonFormat.{number, obj, parse}
-import io.fintrospect.parameters.{ApiKey, Body, FormField, Header, InvalidParameter, Path, Query}
-import io.fintrospect.util.Echo
-import io.fintrospect.util.HttpRequestResponseUtil.{contentFrom, statusAndContentFrom}
-import io.fintrospect.{ModuleSpec, ResponseSpec, RouteSpec}
-import org.scalatest.{FunSpec, ShouldMatchers}
+import io.fintrospect.formats.Argo
+import io.fintrospect.formats.Argo.JsonFormat.{number, obj, parse}
+import io.fintrospect.parameters.{Body, FormField, Header, Path, Query}
+import io.fintrospect.util.HttpRequestResponseUtil.statusAndContentFrom
+import io.fintrospect.util.{Echo, ExtractionError}
+import io.fintrospect.{ApiKey, ModuleSpec, ResponseSpec, RouteSpec}
+import org.scalatest.{FunSpec, Matchers}
 
 import scala.io.Source
 
-abstract class ArgoJsonModuleRendererTest() extends FunSpec with ShouldMatchers {
+abstract class ArgoJsonModuleRendererTest() extends FunSpec with Matchers {
   def name: String = this.getClass.getSimpleName
 
   def renderer: ModuleRenderer
@@ -50,13 +50,13 @@ abstract class ArgoJsonModuleRendererTest() extends FunSpec with ShouldMatchers 
 
       val expected = parse(Source.fromInputStream(this.getClass.getResourceAsStream(s"$name.json")).mkString)
 
-      val actual = contentFrom(Await.result(module.toService(Request("/basepath"))))
+      val actual = Await.result(module.toService(Request("/basepath"))).contentString
       //                  println(actual)
-      parse(actual) shouldEqual expected
+      parse(actual) shouldBe expected
     }
 
     it("can build 400") {
-      val response = statusAndContentFrom(renderer.badRequest(Seq(InvalidParameter(Query.required.string("bob"), "missing"))))
+      val response = statusAndContentFrom(renderer.badRequest(Seq(ExtractionError(Query.required.string("bob"), "missing"))))
       response._1 shouldBe Status.BadRequest
       parse(response._2).getStringValue("message") shouldBe "Missing/invalid parameters"
     }

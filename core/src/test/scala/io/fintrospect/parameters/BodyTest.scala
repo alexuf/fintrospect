@@ -5,16 +5,17 @@ import java.time.LocalDate
 import argo.jdom.JsonRootNode
 import com.twitter.finagle.http.Method.Get
 import com.twitter.finagle.http.Request
-import io.fintrospect.ContentTypes
-import io.fintrospect.formats.json.Argo
-import io.fintrospect.formats.json.Argo.JsonFormat.{obj, pretty, string}
-import io.fintrospect.util.HttpRequestResponseUtil.contentFrom
+import io.fintrospect.formats.Argo
+import io.fintrospect.formats.Argo.JsonFormat.{obj, pretty, string}
+import io.fintrospect.util.ExtractionError.Invalid
+import io.fintrospect.util.{Extracted, ExtractionError, ExtractionFailed}
+import io.fintrospect.{ContentTypes, RequestBuilder}
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names
-import org.scalatest.{FunSpec, ShouldMatchers}
+import org.scalatest.{FunSpec, Matchers}
 
 import scala.xml.XML
 
-class BodyTest extends FunSpec with ShouldMatchers {
+class BodyTest extends FunSpec with Matchers {
 
   describe("body") {
 
@@ -24,12 +25,12 @@ class BodyTest extends FunSpec with ShouldMatchers {
       val bodyJson = obj("field" -> string("value"))
       val request = Request("/")
       request.write(pretty(bodyJson))
-      body.extract(request) shouldEqual Extracted(bodyJson)
-      body <-- request shouldEqual bodyJson
+      body.extract(request) shouldBe Extracted(Some(bodyJson))
+      body <-- request shouldBe bodyJson
     }
 
     it("validation when missing") {
-      body.extract(Request()) shouldEqual ExtractionFailed(body.iterator.toSeq.map(InvalidParameter.Invalid))
+      body.extract(Request()) shouldBe ExtractionFailed(body.iterator.toSeq.map(p => Invalid(p)))
     }
   }
 
@@ -41,10 +42,10 @@ class BodyTest extends FunSpec with ShouldMatchers {
       val bindings = formBody --> inputForm
       val request = bindings.foldLeft(RequestBuilder(Get)) { (requestBuild, next) => next(requestBuild) }.build()
 
-      contentFrom(request) shouldEqual "aString="
-      request.headerMap(Names.CONTENT_TYPE) shouldEqual ContentTypes.APPLICATION_FORM_URLENCODED.value
+      request.contentString shouldBe "aString="
+      request.headerMap(Names.CONTENT_TYPE) shouldBe ContentTypes.APPLICATION_FORM_URLENCODED.value
       val deserializedForm = formBody from request
-      deserializedForm shouldEqual inputForm
+      deserializedForm shouldBe inputForm
     }
 
     it("should serialize and deserialize into the request") {
@@ -54,10 +55,10 @@ class BodyTest extends FunSpec with ShouldMatchers {
       val bindings = formBody --> inputForm
       val request = bindings.foldLeft(RequestBuilder(Get)) { (requestBuild, next) => next(requestBuild) }.build()
 
-      contentFrom(request) shouldEqual "date=1976-08-31"
-      request.headerMap(Names.CONTENT_TYPE) shouldEqual ContentTypes.APPLICATION_FORM_URLENCODED.value
+      request.contentString shouldBe "date=1976-08-31"
+      request.headerMap(Names.CONTENT_TYPE) shouldBe ContentTypes.APPLICATION_FORM_URLENCODED.value
       val deserializedForm = formBody from request
-      deserializedForm shouldEqual inputForm
+      deserializedForm shouldBe inputForm
     }
 
     it("should serialize strings correctly into the request") {
@@ -67,9 +68,9 @@ class BodyTest extends FunSpec with ShouldMatchers {
       val bindings = formBody --> inputForm
       val request = bindings.foldLeft(RequestBuilder(Get)) { (requestBuild, next) => next(requestBuild) }.build()
 
-      request.headerMap(Names.CONTENT_TYPE) shouldEqual ContentTypes.APPLICATION_FORM_URLENCODED.value
+      request.headerMap(Names.CONTENT_TYPE) shouldBe ContentTypes.APPLICATION_FORM_URLENCODED.value
       val deserializedForm = formBody from request
-      deserializedForm shouldEqual inputForm
+      deserializedForm shouldBe inputForm
     }
 
     it("can rebind valid value") {
@@ -81,7 +82,24 @@ class BodyTest extends FunSpec with ShouldMatchers {
       val rebindings = formBody <-> inRequest
       val outRequest = rebindings.foldLeft(RequestBuilder(Get)) { (requestBuild, next) => next(requestBuild) }.build()
       val deserializedForm = formBody from outRequest
-      deserializedForm shouldEqual inputForm
+      deserializedForm shouldBe inputForm
+    }
+  }
+
+  describe("Webform") {
+    it("collects valid and invalid fields from the request, and maps error fields to custom messages") {
+      val optional = FormField.optional.string("anOption")
+      val string = FormField.required.string("aString")
+      val anotherString = FormField.required.string("anotherString")
+      val formBody = Body.webForm(optional -> "Custom", string -> "Custom", anotherString -> "Custom")
+      val inputForm = Form(string --> "asd")
+      val bindings = formBody --> inputForm
+      val request = bindings.foldLeft(RequestBuilder(Get)) { (requestBuild, next) => next(requestBuild) }.build()
+
+      request.contentString shouldBe "aString=asd"
+      request.headerMap(Names.CONTENT_TYPE) shouldBe ContentTypes.APPLICATION_FORM_URLENCODED.value
+      val deserializedForm = formBody from request
+      deserializedForm shouldBe new Form(inputForm.fields, Seq(ExtractionError(anotherString, "Custom")))
     }
   }
 
@@ -94,10 +112,10 @@ class BodyTest extends FunSpec with ShouldMatchers {
 
       val request = bindings.foldLeft(RequestBuilder(Get)) { (requestBuild, next) => next(requestBuild) }.build()
 
-      contentFrom(request) shouldEqual "{\"bob\":\"builder\"}"
-      request.headerMap(Names.CONTENT_TYPE) shouldEqual ContentTypes.APPLICATION_JSON.value
+      request.contentString shouldBe "{\"bob\":\"builder\"}"
+      request.headerMap(Names.CONTENT_TYPE) shouldBe ContentTypes.APPLICATION_JSON.value
       val deserializedJson = jsonBody <-- request
-      deserializedJson shouldEqual inputJson
+      deserializedJson shouldBe inputJson
     }
 
     it("can rebind valid value") {
@@ -107,7 +125,7 @@ class BodyTest extends FunSpec with ShouldMatchers {
 
       val bindings = Body.json(None) <-> inRequest
       val outRequest = bindings.foldLeft(RequestBuilder(Get)) { (requestBuild, next) => next(requestBuild) }.build()
-      Argo.JsonFormat.parse(contentFrom(outRequest)) shouldEqual inputJson
+      Argo.JsonFormat.parse(outRequest.contentString) shouldBe inputJson
     }
   }
 
@@ -120,10 +138,10 @@ class BodyTest extends FunSpec with ShouldMatchers {
 
       val request = bindings.foldLeft(RequestBuilder(Get)) { (requestBuild, next) => next(requestBuild) }.build()
 
-      contentFrom(request) shouldEqual "<field>value</field>"
-      request.headerMap(Names.CONTENT_TYPE) shouldEqual ContentTypes.APPLICATION_XML.value
+      request.contentString shouldBe "<field>value</field>"
+      request.headerMap(Names.CONTENT_TYPE) shouldBe ContentTypes.APPLICATION_XML.value
       val deserializedXml = xmlBody <-- request
-      deserializedXml shouldEqual inputXml
+      deserializedXml shouldBe inputXml
     }
 
     it("can rebind valid value") {
@@ -132,7 +150,7 @@ class BodyTest extends FunSpec with ShouldMatchers {
       inRequest.setContentString(inputXml.toString())
       val bindings = Body.xml(None) <-> inRequest
       val outRequest = bindings.foldLeft(RequestBuilder(Get)) { (requestBuild, next) => next(requestBuild) }.build()
-      XML.loadString(contentFrom(outRequest)) shouldEqual inputXml
+      XML.loadString(outRequest.contentString) shouldBe inputXml
     }
   }
 }

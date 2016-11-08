@@ -1,0 +1,29 @@
+<html>
+<body>
+
+<b style="color: red">{{errors.general}}</b>
+
+<p>Please enter the age of a candidate:</p>
+
+<form action="/" method="post">
+    <label>Name:</label>
+    <select id="name" name="name">
+        <option value="">- select -</option>
+        {{#names}}
+            <option value="{{.}}">{{.}}</option>
+        {{/names}}
+    </select>
+    <b style="color: red">{{errors.name}}</b>
+    <br/>
+    <label>Age in years:</label>
+    <input type="text" id="age" name="age" value="{{values.age}}"/>
+    <b style="color: red">{{errors.age}}</b>
+    <br/>
+    <button>submit</button>
+</form>
+
+</body>
+</html>
+<script>
+    document.getElementById("name").value = "{{values.name}}";
+</script>

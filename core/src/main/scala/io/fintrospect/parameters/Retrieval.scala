@@ -1,5 +1,7 @@
 package io.fintrospect.parameters
 
+import io.fintrospect.util.{Extracted, Extractor}
+
 /**
   * Represents the ability to retrieve a value from an enclosing object (request/form etc..)
   */
@@ -23,8 +25,9 @@ trait Mandatory[-From, T] extends Retrieval[From, T] with Extractor[From, T] {
   val required = true
 
   override def <--(from: From): T = extract(from) match {
-    case Extracted(t) => t
-    case _ => throw new IllegalStateException("Extraction should not have failed")
+    case Extracted(Some(t)) => t
+    case Extracted(None) => throw new IllegalStateException("Extraction failed: Missing")
+    case _ => throw new IllegalStateException("Extraction failed: Invalid")
   }
 }
 
@@ -32,8 +35,7 @@ trait Optional[-From, T] extends Retrieval[From, Option[T]] with Extractor[From,
   val required = false
 
   def <--(from: From): Option[T] = extract(from) match {
-    case Extracted(t) => Some(t)
-    case NotProvided => None
-    case _ => throw new IllegalStateException("Extraction should not have failed")
+    case Extracted(value) => value
+    case _ => throw new IllegalStateException("Extraction failed: Invalid")
   }
 }

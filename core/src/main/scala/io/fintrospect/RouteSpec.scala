@@ -1,9 +1,9 @@
 package io.fintrospect
 
 import com.twitter.finagle.http.{Method, Request, Response, Status}
-import io.fintrospect.formats.json.{Argo, JsonFormat}
-import io.fintrospect.parameters.{Body, Extraction, Extractor, HeaderParameter, NotProvided, Parameter, QueryParameter}
-import io.fintrospect.util.HttpRequestResponseUtil.contentFrom
+import io.fintrospect.formats.{Argo, JsonFormat}
+import io.fintrospect.parameters.{Binding, Body, HeaderParameter, Parameter, QueryParameter, Rebindable}
+import io.fintrospect.util.{Extracted, Extraction, Extractor}
 
 /**
   * Encapsulates the specification of an HTTP endpoint, for use by either a Finagle server or client.
@@ -13,7 +13,7 @@ case class RouteSpec private(summary: String,
                              produces: Set[ContentType],
                              consumes: Set[ContentType],
                              body: Option[Body[_]],
-                             requestParams: Seq[Parameter with Extractor[Request, _]],
+                             requestParams: Seq[Parameter with Extractor[Request, _] with Rebindable[Request, _, Binding]],
                              responses: Seq[ResponseSpec],
                              validation: RouteSpec => Extractor[Request, Nothing]) {
 
@@ -22,7 +22,7 @@ case class RouteSpec private(summary: String,
   /**
     * Register content types which the route will consume. This is informational only and is NOT currently enforced.
     */
-  def consuming(contentTypes: ContentType*): RouteSpec = copy(consumes = produces ++ contentTypes)
+  def consuming(contentTypes: ContentType*): RouteSpec = copy(consumes = consumes ++ contentTypes)
 
   /**
     * Register content types which thus route will produce. This is informational only and NOT currently enforced.
@@ -57,9 +57,7 @@ case class RouteSpec private(summary: String,
   /**
     * Register an exact possible response which could be produced by this route. Will be used for schema generation if content is JSON.
     */
-  def returning(response: Response): RouteSpec = {
-    returning(new ResponseSpec(response.status -> response.status.reason, Option(contentFrom(response))))
-  }
+  def returning(response: Response): RouteSpec = returning(new ResponseSpec(response.status -> response.status.reason, Option(response.contentString)))
 
   /**
     * Register a possible response which could be produced by this route, with an example JSON body (used for schema generation).
@@ -71,7 +69,7 @@ case class RouteSpec private(summary: String,
     */
   def returning(code: (Status, String), example: String): RouteSpec = copy(responses = new ResponseSpec(code, Option(example)) +: responses)
 
-  def at(method: Method) = IncompletePath(this, method)
+  def at(method: Method) = UnboundRoute(this, method)
 }
 
 object RouteSpec {
@@ -116,7 +114,7 @@ object RouteSpec {
       * Do not perform any validation of the request parameters or the body.
       */
     val none = new RequestValidation {
-      def apply(spec: RouteSpec) = Extractor.mk { (request: Request) => NotProvided }
+      def apply(spec: RouteSpec) = Extractor.mk { (request: Request) => Extracted(None) }
     }
   }
 

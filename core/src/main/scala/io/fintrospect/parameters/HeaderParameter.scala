@@ -3,13 +3,12 @@ package io.fintrospect.parameters
 import com.twitter.finagle.http.{Message, Request}
 
 trait HeaderParameter[T]
-  extends Parameter
-  with Bindable[T, RequestBinding] {
+  extends Parameter with Rebindable[Message, T, RequestBinding] {
 
-  val where = "header"
+  override val where = "header"
 }
 
-private object HeaderExtractAndRebind extends ParameterExtractAndBind[Message, RequestBinding] {
+object HeaderExtractAndRebind extends ParameterExtractAndBind[Message, RequestBinding] {
   def newBinding(parameter: Parameter, value: String) = new RequestBinding(parameter, {
     req: Request => {
       req.headerMap.add(parameter.name, value)
@@ -21,10 +20,6 @@ private object HeaderExtractAndRebind extends ParameterExtractAndBind[Message, R
     val headers = message.headerMap.getAll(parameter.name)
     if (headers.isEmpty) None else Some(headers.toSeq)
   }
-}
-
-abstract class SingleHeaderParameter[T](spec: ParameterSpec[T])
-  extends SingleParameter(spec, HeaderExtractAndRebind) with HeaderParameter[T] {
 }
 
 abstract class MultiHeaderParameter[T](spec: ParameterSpec[T])

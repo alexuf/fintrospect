@@ -2,10 +2,68 @@
 
 The main API is stable, but expect some amount of breaking changes around major releases as new features are added. All breaking changes are documented with a migration step where possible.
 
-## Backlog/upcoming
+## Backlog
 - Add strict `Content-Type` header checking for `RouteSpec`s based on `consuming()` and `withBody()` settings. Option for non-strictness.
 - Add strict `Accept` header checking for `RouteSpec`s based on `producing()` settings. Option for non-strictness.
-- Option to dynamically reload View templates.
+- Add integrated self-hosted Swagger UI/ReDoc UI module
+
+## 13.10.1
+- Replaced `Circe.JsonFormat.patchBodySpec()` with `patchBody()` to ease use of Patch endpoint creations.
+
+## 13.10.0
+- Upgrade to various dependency versions, including Circe `0.5.4`.
+- `Circe.JsonFormat`: Added explicit `patcher()` method to allow patch updates for case class instances (via auto-marshalling JSON modules).
+- Added support to `StrictContentTypeNegotiation` for routes serving multiple content types. See `StrictMultiContentTypeRoute` example. 
+
+## 13.9.1
+- Bugfix: Issue #24. Remove transitive dependency on `sl4j-simple` in `fintrospect-handlebars` to avoid SL4J warnings.
+
+## 13.9.0
+- Breaking: Repackage of JSON message format libraries. `io.fintrospect.formats.json.<LibraryName>` are now just `io.fintrospect.formats` instead. To fix, simply find/replace the package names in your source.
+- Breaking: Split `Json4s.Native` and `Json4s.Jackson` into their own top-level message objects. The mapping is `Json4s.Native` -> `Json4s`/`Json4sDoubleMode` and `Json4s.Jackson` -> `Json4sJackson`/`Json4sJacksonDoubleMode`, so simply find/replace references in your source.
+- Upgrade to various dependency versions, including Finagle `6.38.0` and Circe `0.5.2`.
+
+## 13.8.1
+- Bugfix: Issue #23. On invalid request, AutoFilters blow up instead of producing BadRequest response
+
+## 13.8.0
+- Added MsgPack library support. Import new module `fintrospect-msgpack` to activate this support.
+
+## 13.7.0
+- Upgrade to various dependency versions, including Finagle `6.37.0` and Circe `0.5.1`.
+
+## 13.6.0
+- (Possible) Breaking: Refactored `StaticModule` to allow serving of directory-based assets. Introduced `Classpath` and `Directory` `ResourceLoaders` to allow for this change.
+
+## 13.5.2 
+- Addition of `Contract` and `ContractProxyModule`. This (optional) formalisation of client contracts allows simple
+exposing of a client API contract via Swagger. See `ContractProxyExample`.
+- (Unlikely) Break: Renamed of `IncompletePath` to `UnboundRoute` for clarity. This should be transparent to end users.
+- Refactor of `Parameter` types and traits. This should be transparent to end users.
+- Removal of Generics in `RequestFilters`. Should make code using these filters easier - by just removing Generics.
+
+## 13.5.1
+- Please ignore this release and roll back to 13.4.0.
+
+## 13.4.0
+- Upgrade to Finagle `6.36.0`
+- Fixed site API docs
+- Added `Body.webform()`, which allows errors to be collected for feedback to the user. See `formvalidation` example
+- Breaking: Removed `NotProvided` extraction option. Extraction now exposes an `Option` instead
+- Breaking: Renamed `InvalidParameter` to `ExtractionError`
+- Breaking: Repackage of some classes from `io.fintrospect.parameters` to `io.fintrospect` and `io.fintrospect.util`
+
+## 13.3.0
+- Option for empty `string` validation to be rejected as `InvalidParameter` in `QueryParameters` et al.
+- Breaking: removed unused `HttpRequestResponseUtil:contentFrom()` method. Simply use `request.contentString` instead
+- `ResponseFilter.ReportingRouteLatency()` now blocks for reporting latency, as using onSuccess was not accurately reporting.
+
+## 13.2.1
+- Dynamic reloading of templates. See implementations of `Templates` (Mustache and Handlebars), or `templating` example.
+- Breaking; Combined `RenderMustacheView` and `RenderHandlebarsView` into `RenderView`.
+
+## 13.1.0
+- Upgrade of some library dependency versions (`scala-xml` and `scala-parser-combinators`)
 
 ## 13.0.0
 - v13! Unlucky for some (but hopefully not for us!)

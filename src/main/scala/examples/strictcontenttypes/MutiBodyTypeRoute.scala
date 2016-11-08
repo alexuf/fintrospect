@@ -8,6 +8,7 @@ import com.twitter.finagle.http.filter.Cors
 import com.twitter.finagle.http.filter.Cors.HttpFilter
 import com.twitter.finagle.http.path.Root
 import com.twitter.finagle.{Http, Service}
+import com.twitter.util.Await
 import io.fintrospect.parameters.Body
 import io.fintrospect.renderers.simplejson.SimpleJson
 import io.fintrospect.util.MultiBodyType
@@ -21,23 +22,23 @@ object MutiBodyTypeRoute extends App {
   private val json = Body.json[JsonRootNode](Option("json body"))
 
   private val echoJson = Service.mk { (rq: Request) =>
-    import io.fintrospect.formats.json.Argo.ResponseBuilder.implicits._
+    import io.fintrospect.formats.Argo.ResponseBuilder.implicits._
     Ok(json <-- rq)
   }
 
   private val xml = Body.xml(Option("xml body"))
 
   private val echoXml = Service.mk { (rq: Request) =>
-      import io.fintrospect.formats.Xml.ResponseBuilder.implicits._
-      Ok(xml <-- rq) }
+    import io.fintrospect.formats.Xml.ResponseBuilder.implicits._
+    Ok(xml <-- rq)
+  }
 
   val route = RouteSpec("echo posted content in either JSON or XML").at(Post) / "echo" bindTo MultiBodyType(json -> echoJson, xml -> echoXml)
 
-  Http.serve(":8080", new HttpFilter(Cors.UnsafePermissivePolicy)
-    .andThen(ModuleSpec(Root, SimpleJson()).withRoute(route).toService))
-
   println("See the service description at: http://localhost:8080")
 
-  Thread.currentThread().join()
-
+  Await.ready(
+    Http.serve(":8080", new HttpFilter(Cors.UnsafePermissivePolicy)
+      .andThen(ModuleSpec(Root, SimpleJson()).withRoute(route).toService))
+  )
 }

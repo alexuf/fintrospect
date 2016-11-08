@@ -1,7 +1,8 @@
 package io.fintrospect
 
 import com.twitter.finagle.http.Status
-import io.fintrospect.formats.json.{Argo, JsonFormat}
+import com.twitter.io.Buf.ByteArray.Shared.extract
+import io.fintrospect.formats.{Argo, JsonFormat}
 import io.fintrospect.parameters.BodySpec
 
 import scala.util.Try
@@ -25,5 +26,5 @@ object ResponseSpec {
   def apply(statusAndDescription: (Status, String)): ResponseSpec = new ResponseSpec(statusAndDescription)
 
   def apply[T](statusAndDescription: (Status, String), example: T, bodySpec: BodySpec[T]): ResponseSpec =
-    new ResponseSpec(statusAndDescription, Try(bodySpec.serialize(example)).toOption)
+    new ResponseSpec(statusAndDescription, Try(new String(extract(bodySpec.serialize(example)))).toOption)
 }

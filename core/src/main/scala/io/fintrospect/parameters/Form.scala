@@ -1,9 +1,13 @@
 package io.fintrospect.parameters
 
+import io.fintrospect.util.ExtractionError
+
 /**
  * The body entity of a encoded HTML form. Basically a wrapper for Form construction and field extraction.
  */
-case class Form(private val fields: collection.Map[String, Set[String]]) extends Iterable[(String, Set[String])] {
+case class Form protected[parameters](fields: Map[String, Set[String]], errors: Seq[ExtractionError] = Nil) extends Iterable[(String, Set[String])] {
+
+  def isValid = errors.isEmpty
 
   /**
    * Convenience method to retrieve multiple fields from form
@@ -56,13 +60,17 @@ case class Form(private val fields: collection.Map[String, Set[String]]) extends
                             fieldF: Retrieval[Form, F]):
   (A, B, C, D, E, F) = (fieldA <-- this, fieldB <-- this, fieldC <-- this, fieldD <-- this, fieldE <-- this, fieldF <-- this)
 
-  def +(key: String, value: String) = Form(fields + (key -> (fields.getOrElse(key, Set()) + value)))
+  def +(key: String, value: String) = Form(fields + (key -> (fields.getOrElse(key, Set()) + value)), errors)
 
-  def get(name: String): Option[Seq[String]] = fields.get(name).map(_.toSeq)
+  def get(name: String): Option[Set[String]] = fields.get(name)
 
   override def iterator: Iterator[(String, Set[String])] = fields.iterator
 }
 
 object Form {
-  def apply(bindings: Iterable[FormFieldBinding]*): Form = bindings.flatten.foldLeft(new Form(Map.empty))((f, b) => b(f))
+
+  /**
+    * Make a form to send to a downsteam system from a set of bindings
+    */
+  def apply(bindings: Iterable[FormFieldBinding]*): Form = bindings.flatten.foldLeft(new Form(Map.empty, Nil))((f, b) => b(f))
 }

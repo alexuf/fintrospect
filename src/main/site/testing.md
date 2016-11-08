@@ -9,13 +9,13 @@ object EchoRoute {
   })
 }
 
-class EchoRouteTest extends FunSpec with ShouldMatchers with TestingFintrospectRoute {
+class EchoRouteTest extends FunSpec with Matchers with TestingFintrospectRoute {
 
   override val route = EchoRoute.route
 
   describe("Echo") {
     it("bounces back message") {
-      responseFor(Request("hello")).contentString shouldEqual "hello"
+      responseFor(Request("hello")).contentString shouldBe "hello"
     }
   }
 }

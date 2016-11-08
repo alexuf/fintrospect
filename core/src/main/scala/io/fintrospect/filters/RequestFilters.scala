@@ -3,16 +3,17 @@ package io.fintrospect.filters
 import java.nio.charset.StandardCharsets.ISO_8859_1
 import java.util.Base64
 
+import com.google.common.net.HttpHeaders
 import com.twitter.finagle.Filter
 import com.twitter.finagle.http.Status.NotAcceptable
 import com.twitter.finagle.http.{Request, Response}
 import com.twitter.util.Future
 import io.fintrospect.ContentType.fromAcceptHeaders
 import io.fintrospect.configuration.{Authority, Credentials}
-import io.fintrospect.formats.json.Argo.ResponseBuilder.implicits._
-import io.fintrospect.parameters.{Extracted, Extraction, ExtractionFailed, Extractor, NotProvided}
+import io.fintrospect.formats.Argo.ResponseBuilder.implicits._
 import io.fintrospect.renderers.ModuleRenderer
 import io.fintrospect.renderers.simplejson.SimpleJson
+import io.fintrospect.util.{Extracted, Extraction, ExtractionFailed, Extractor}
 import io.fintrospect.{ContentType, ContentTypes}
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names.{ACCEPT, AUTHORIZATION, HOST}
 
@@ -66,9 +67,19 @@ object RequestFilters {
   }
 
   /**
+    * Add User-Agent header to the Request.
+    */
+  def AddUserAgent[T](user: String) = Filter.mk[Request, T, Request, T] {
+    (req, svc) => {
+      req.headerMap(HttpHeaders.USER_AGENT) = user
+      svc(req)
+    }
+  }
+
+  /**
     * Add Authorization header with base-64 encoded credentials to the Request
     */
-  def BasicAuthorization[T](credentials: Credentials) = Filter.mk[Request, T, Request, T] {
+  def BasicAuthorization(credentials: Credentials) = Filter.mk[Request, Response, Request, Response] {
     (req, svc) => {
       val base64Credentials = Base64.getEncoder.encodeToString(s"${credentials.username}:${credentials.password}".getBytes(ISO_8859_1))
       req.headerMap(AUTHORIZATION) = "Basic " + base64Credentials.trim
@@ -91,8 +102,8 @@ object RequestFilters {
   Filter[Request, Response, I, Response] = Filter.mk[Request, Response, I, Response] {
     (req, svc) => {
       extractable <--? req match {
-        case Extracted(x) => svc(x)
-        case NotProvided => Future.value(moduleRenderer.badRequest(Seq()))
+        case Extracted(Some(x)) => svc(x)
+        case Extracted(None) => Future.value(moduleRenderer.badRequest(Nil))
         case ExtractionFailed(invalid) => Future.value(moduleRenderer.badRequest(invalid))
       }
     }

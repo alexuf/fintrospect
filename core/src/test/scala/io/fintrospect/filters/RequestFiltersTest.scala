@@ -7,14 +7,15 @@ import com.twitter.util.Await.result
 import com.twitter.util.{Await, Future}
 import io.fintrospect.ContentTypes
 import io.fintrospect.ContentTypes.{APPLICATION_XHTML_XML, APPLICATION_XML, WILDCARD}
-import io.fintrospect.configuration.{Authority, Credentials, Host, Port}
+import io.fintrospect.configuration.{Credentials, Host, Port}
 import io.fintrospect.filters.RequestFilters.{AddHost, BasicAuthorization, StrictAccept}
 import io.fintrospect.formats.PlainText.ResponseBuilder.implicits._
-import io.fintrospect.parameters.{Extracted, ExtractionFailed, Extractor, NotProvided, Query}
+import io.fintrospect.parameters.Query
 import io.fintrospect.util.HttpRequestResponseUtil.headerOf
-import org.scalatest.{FunSpec, ShouldMatchers}
+import io.fintrospect.util.{Extracted, ExtractionFailed, Extractor}
+import org.scalatest.{FunSpec, Matchers}
 
-class RequestFiltersTest extends FunSpec with ShouldMatchers {
+class RequestFiltersTest extends FunSpec with Matchers {
 
   describe("Request") {
 
@@ -23,7 +24,7 @@ class RequestFiltersTest extends FunSpec with ShouldMatchers {
         val message = "hello"
 
         val filter = RequestFilters.ExtractingRequest {
-          req => Extracted(message)
+          req => Extracted(Some(message))
         }
         val response = result(filter(Request(), Service.mk { message => Ok(message) }))
 
@@ -40,7 +41,7 @@ class RequestFiltersTest extends FunSpec with ShouldMatchers {
         }
 
         val filter = RequestFilters.ExtractingRequest[String] {
-          req => ExtractionFailed(Seq())
+          req => ExtractionFailed(Nil)
         }
         val response = result(filter(Request(), Service.mk { message => Ok(message) }))
 
@@ -49,7 +50,7 @@ class RequestFiltersTest extends FunSpec with ShouldMatchers {
 
       it("when extraction fails with no object at all then return bad request") {
         val filter = RequestFilters.ExtractingRequest[String] {
-          req => NotProvided
+          req => Extracted(None)
         }
         val response = result(filter(Request(), Service.mk { message => Ok(message) }))
 
@@ -98,14 +99,34 @@ class RequestFiltersTest extends FunSpec with ShouldMatchers {
 
     describe("AddHost") {
       it("adds authority host header") {
-        val authority = Authority(Host.localhost, Port(9865))
-        result(AddHost(authority)(Request(), Service.mk { req => Future.value(headerOf("Host")(req)) })) shouldBe authority.toString
+        result(AddHost(Host.localhost.toAuthority(Port(80)))(Request(), Service.mk { req => {
+          val r = Response()
+          r.contentString = headerOf("Host")(req)
+          Future.value(r)
+        }
+        })).contentString shouldBe "localhost:80"
+      }
+    }
+
+    describe("AddUserAgent") {
+      it("adds user agent header") {
+        result(RequestFilters.AddUserAgent("bob")(Request(), Service.mk {
+          req =>
+            val r = Response()
+            r.contentString = headerOf("User-Agent")(req)
+            Future.value(r)
+        })).contentString shouldBe "bob"
       }
     }
 
     describe("BasicAuthorization") {
       it("adds basic authorization header") {
-        result(BasicAuthorization(Credentials("hello", "kitty"))(Request(), Service.mk { req => Future.value(headerOf("Authorization")(req)) })) shouldBe "Basic aGVsbG86a2l0dHk="
+        result(BasicAuthorization(Credentials("hello", "kitty"))(Request(),  Service.mk {
+          req =>
+            val r = Response()
+            r.contentString = headerOf("Authorization")(req)
+            Future.value(r)
+        })).contentString shouldBe "Basic aGVsbG86a2l0dHk="
       }
     }
 

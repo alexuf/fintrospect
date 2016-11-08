@@ -5,16 +5,16 @@ import com.twitter.finagle.http.path.Path
 import com.twitter.finagle.http.{Request, Response, Status}
 import examples.customformats.HipsterXml.ResponseBuilder.Error
 import examples.customformats.HipsterXml.ResponseBuilder.implicits.{responseBuilderToResponse, statusToResponseBuilderConfig}
-import io.fintrospect.ServerRoute
-import io.fintrospect.parameters.{InvalidParameter, Security}
 import io.fintrospect.renderers.ModuleRenderer
+import io.fintrospect.util.ExtractionError
+import io.fintrospect.{Security, ServerRoute}
 
 /**
  * Hyper-cool, next-gen, markup used by all true rockstar coderzzzz
  */
 object HipsterXmlModuleRenderer extends ModuleRenderer {
 
-  override def badRequest(badParameters: Seq[InvalidParameter]): Response = Error(Status.BadRequest, badParameters.toString())
+  override def badRequest(badParameters: Seq[ExtractionError]): Response = Error(Status.BadRequest, badParameters.toString())
 
   override def notFound(request: Request): Response = Error(Status.NotFound)
 

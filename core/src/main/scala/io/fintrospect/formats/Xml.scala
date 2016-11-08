@@ -3,6 +3,7 @@ package io.fintrospect.formats
 import com.twitter.finagle.http.Status.Ok
 import com.twitter.finagle.http.{Request, Response, Status}
 import com.twitter.finagle.{Filter, Service}
+import com.twitter.io.Buf
 import io.fintrospect.ContentTypes
 import io.fintrospect.parameters.Body
 
@@ -17,7 +18,9 @@ object Xml {
     * Auto-marshalling filters which can be used to create Services which take and return Elem objects
     * instead of HTTP responses
     */
-  object Filters extends AutoFilters[Elem](Xml.ResponseBuilder) {
+  object Filters extends AutoFilters[Elem] {
+
+    override protected val responseBuilder = Xml.ResponseBuilder
 
     import Xml.ResponseBuilder.implicits._
 
@@ -31,7 +34,7 @@ object Xml {
       * HTTP OK is returned by default in the auto-marshalled response (overridable).
       */
     def AutoInOut(svc: Service[Elem, Elem], successStatus: Status = Ok): Service[Request, Response] =
-      AutoIn(body).andThen(AutoOut[Elem](successStatus)).andThen(svc)
+    AutoIn(body).andThen(AutoOut[Elem](successStatus)).andThen(svc)
 
     /**
       * Wrap the enclosed service with auto-marshalling of input and output Elem instances for HTTP POST scenarios
@@ -64,7 +67,7 @@ object Xml {
 
     private def formatError(throwable: Throwable): Elem = formatErrorMessage(Option(throwable.getMessage).getOrElse(throwable.getClass.getName))
 
-    override def HttpResponse() = new ResponseBuilder[Elem](format, formatErrorMessage, formatError, ContentTypes.APPLICATION_XML)
+    override def HttpResponse() = new ResponseBuilder[Elem](i => Buf.Utf8(format(i)), formatErrorMessage, formatError, ContentTypes.APPLICATION_XML)
   }
 
 }

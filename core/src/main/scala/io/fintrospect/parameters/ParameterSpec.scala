@@ -4,7 +4,8 @@ import java.time.format.DateTimeFormatter.{ISO_LOCAL_DATE, ISO_LOCAL_DATE_TIME, 
 import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
 import java.util.UUID
 
-import io.fintrospect.formats.json.{Argo, JsonFormat}
+import io.fintrospect.formats.{Argo, JsonFormat}
+import io.fintrospect.parameters.StringValidation.EmptyIsValid
 
 import scala.xml.{Elem, XML}
 
@@ -38,6 +39,7 @@ case class ParameterSpec[T](name: String,
   * Predefined ParameterSpec instances for common types
   */
 object ParameterSpec {
+
   def localDate(name: String, description: String = null) = ParameterSpec[LocalDate](name, Option(description), StringParamType, LocalDate.parse(_), ISO_LOCAL_DATE.format(_))
 
   def zonedDateTime(name: String, description: String = null) = ParameterSpec[ZonedDateTime](name, Option(description), StringParamType, ZonedDateTime.parse(_), ISO_ZONED_DATE_TIME.format(_))
@@ -46,7 +48,9 @@ object ParameterSpec {
 
   def boolean(name: String, description: String = null) = ParameterSpec[Boolean](name, Option(description), BooleanParamType, _.toBoolean, _.toString)
 
-  def string(name: String, description: String = null) = ParameterSpec[String](name, Option(description), StringParamType, _.toString, _.toString)
+  def string(name: String, description: String = null, validation: StringValidation = EmptyIsValid) = {
+    ParameterSpec[String](name, Option(description), StringParamType, validation, _.toString)
+  }
 
   def uuid(name: String, description: String = null) = ParameterSpec[UUID](name, Option(description), StringParamType, UUID.fromString, _.toString)
 

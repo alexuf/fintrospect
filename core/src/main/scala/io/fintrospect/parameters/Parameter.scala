@@ -1,6 +1,7 @@
 package io.fintrospect.parameters
 
-import io.fintrospect.parameters.InvalidParameter.{Invalid, Missing}
+import io.fintrospect.util.ExtractionError.{Invalid, Missing}
+import io.fintrospect.util.{ExtractableParameter, Extracted, Extraction, ExtractionFailed}
 
 import scala.util.{Failure, Success, Try}
 
@@ -15,17 +16,14 @@ trait Parameter {
   val where: String
   val paramType: ParamType
 
-  override def toString = s"Parameter(name=$name,where=$where,paramType=${paramType.name})"
+  override def toString = s"${if (required) "Mandatory" else "Optional"} parameter $name (${paramType.name}) in $where"
 
   protected def extractFrom[T](deserialize: Seq[String] => Try[T],
-                     fromInput: Option[Seq[String]]): Extraction[T] =
-    fromInput.map {
-      v =>
-        deserialize(v) match {
-          case Success(d) => Extracted(d)
-          case Failure(_) => ExtractionFailed(Invalid(this))
-        }
-    }.getOrElse(if (required) ExtractionFailed(Missing(this)) else NotProvided)
+                               fromInput: Option[Seq[String]]): Extraction[T] =
+    fromInput.map(deserialize).map {
+      case Success(d) => Extracted(Some(d))
+      case Failure(_) => ExtractionFailed(Invalid(this))
+    }.getOrElse(if (required) ExtractionFailed(Missing(this)) else Extracted(None))
 }
 
 /**
@@ -33,11 +31,29 @@ trait Parameter {
   */
 trait ParameterExtractAndBind[From, B <: Binding] {
   def newBinding(parameter: Parameter, value: String): B
+
   def valuesFrom(parameter: Parameter, from: From): Option[Seq[String]]
 }
 
-abstract class SingleParameter[T, From, B <: Binding](spec: ParameterSpec[T], eab: ParameterExtractAndBind[From, B]) {
-  self: Parameter with Bindable[T, B] =>
+trait OptionalParameter[From, T, Bnd <: Binding] extends Optional[From, T]
+  with ExtractableParameter[From, T]
+  with Rebindable[From, T, Bnd] {
+  override def <->(from: From): Iterable[Bnd] = (this <-- from).map(this.-->).getOrElse(Nil)
+
+  /**
+    * This is an extra implementation of bindable to allow us to bind to Option[T] as well as [T]
+    */
+  def -->(value: Option[T]): Iterable[Bnd] = value.map(-->).getOrElse(Nil)
+}
+
+trait MandatoryParameter[From, T, Bnd <: Binding] extends Mandatory[From, T]
+  with ExtractableParameter[From, T]
+  with Rebindable[From, T, Bnd] {
+  override def <->(from: From): Iterable[Bnd] = this --> (this <-- from)
+}
+
+abstract class SingleParameter[T, From, B <: Binding](spec: ParameterSpec[T], eab: ParameterExtractAndBind[From, B])
+  extends Parameter with Bindable[T, B] {
 
   override val name = spec.name
   override val description = spec.description
@@ -48,10 +64,8 @@ abstract class SingleParameter[T, From, B <: Binding](spec: ParameterSpec[T], ea
   def <--?(from: From) = extractFrom(xs => Try(spec.deserialize(xs.head)), eab.valuesFrom(this, from))
 }
 
-abstract class MultiParameter[T, From, B <: Binding](spec: ParameterSpec[T], eab: ParameterExtractAndBind[From, B]) {
-
-  self: Parameter with Bindable[Seq[T], B] =>
-
+abstract class MultiParameter[T, From, B <: Binding](spec: ParameterSpec[T], eab: ParameterExtractAndBind[From, B])
+  extends Parameter with Bindable[Seq[T], B] {
   override val name = spec.name
   override val description = spec.description
   override val paramType = spec.paramType
