@@ -7,9 +7,10 @@ import com.twitter.finagle.http.filter.Cors.HttpFilter
 import com.twitter.finagle.http.path.Root
 import com.twitter.finagle.{Http, Service}
 import io.fintrospect.Module.{combine, toService}
+import io.fintrospect.ResourceLoader.Classpath
 import io.fintrospect.formats.Json4s
 import io.fintrospect.parameters.{ParameterSpec, Query}
-import io.fintrospect.{ModuleSpec, ResourceLoader, RouteSpec, StaticModule}
+import io.fintrospect.{ModuleSpec, RouteSpec, StaticModule}
 import models.SchemaDefinition
 import sangria.parser.QueryParser
 
@@ -36,34 +37,11 @@ object GraphQLServer extends App {
     .taking(operation)
     .at(Get) / "graphql" bindTo graphQlQuery
 
-  //  val body = Body.json(None, null, jsonLibrary.JsonFormat)
-  //
-  //  val postQuery = RouteSpec()
-  //    .body(body)
-  //    .at(Post) / "graphqlBody" bindTo graphQlQuery
+  val queryBody = Json4s.JsonFormat.body[GQL]()
 
-  //    Action.async(executeQuery(query, variables map parseVariables, operation))
-
-  //  def graphqlBody = Action.async(parse.json) { request =>
-  //    val query = (request.body \ "query").as[String]
-  //    val operation = (request.body \ "operationName").asOpt[String]
-  //
-  //    val variables = (request.body \ "variables").toOption.flatMap {
-  //      case JsString(vars) => Some(parseVariables(vars))
-  //      case obj: JsObject => Some(obj)
-  //      case _ => None
-  //    }
-  //
-  //    executeQuery(query, variables, operation)
-  //  }
-
-
-  val body = Json4s.JsonFormat.body[GQL]()
-
-  val postQuery = RouteSpec().body(body).at(Post) / "graphql" bindTo Service.mk {
+  val postQuery = RouteSpec().body(queryBody).at(Post) / "graphql" bindTo Service.mk {
     req: Request =>
-
-      val q = body <-- req
+      val q = queryBody <-- req
       new QueryExecutor().execute(
         GraphQLQuery(
           QueryParser.parse(q.query).get,
@@ -76,7 +54,7 @@ object GraphQLServer extends App {
     .withRoute(getQuery)
     .withRoute(postQuery)
 
-  val overallSvc = toService(combine(StaticModule(Root, ResourceLoader.Classpath("public")), graphQLModule))
+  val overallSvc = toService(combine(StaticModule(Root, Classpath("public")), graphQLModule))
 
   Http.serve(":9000", new HttpFilter(Cors.UnsafePermissivePolicy).andThen(overallSvc))
 
