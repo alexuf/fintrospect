@@ -58,52 +58,53 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
       if (out.isEmpty) default else out.head
     })
 
-  //
-  ///**
-  //* Make a concrete Lens for this spec that looks for an optional value in the target.
-  //*/
-  //open fun optional(name: String, description: String? = null): Lens<IN, OUT?> {
-  //val meta = Meta(false, location, paramMeta, name, description)
-  //val getLens = get(name)
-  //return Lens(meta, { getLens(it).let { if (it.isEmpty()) null else it.first() } })
-  //}
-  //
-  ///**
-  //* Make a concrete Lens for this spec that looks for a required value in the target.
-  //*/
-  //open fun required(name: String, description: String? = null): Lens<IN, OUT> {
-  //val meta = Meta(true, location, paramMeta, name, description)
-  //val getLens = get(name)
-  //return Lens(meta, { getLens(it).firstOrNull() ?: throw LensFailure(Missing(meta)) })
-  //}
-  //
-  //open val multi = object : MultiLensSpec<IN, OUT> {
-  ///**
-  //  * Make a concrete Lens for this spec that falls back to the default list of values if no values are found in the target.
-  //  */
-  //override fun defaulted(name: String, default: List<OUT>, description: String?): Lens<IN, List<OUT>> {
-  //val meta = Meta(false, location, paramMeta, name, description)
-  //val getLens = get(name)
-  //return Lens(meta, { getLens(it).let { if (it.isEmpty()) default else it } })
-  //}
-  //
-  ///**
-  //  * Make a concrete Lens for this spec that looks for an optional list of values in the target.
-  //  */
-  //override fun optional(name: String, description: String?): Lens<IN, List<OUT>?> {
-  //val meta = Meta(false, location, paramMeta, name, description)
-  //val getLens = get(name)
-  //return Lens(meta, { getLens(it).let { if (it.isEmpty()) null else it } })
-  //}
-  //
-  ///**
-  //  * Make a concrete Lens for this spec that looks for a required list of values in the target.
-  //  */
-  //override fun required(name: String, description: String?): Lens<IN, List<OUT>> {
-  //val meta = Meta(true, location, paramMeta, name, description)
-  //val getLens = get(name)
-  //return Lens(meta, { getLens(it).let { if (it.isEmpty()) throw LensFailure(Missing(meta)) else it } })
-  //}
-  //}
+
+  /**
+    * Make a concrete Lens for this spec that looks for an optional value in the target.
+    */
+  def optional(name: String, description: String = null): Lens[IN, Option[OUT]] = {
+    val meta = Meta(false, location, paramMeta, name, description)
+    new Lens(meta, it => get(name)(it).headOption)
+  }
+
+  /**
+    * Make a concrete Lens for this spec that looks for a required value in the target.
+    */
+  def required(name: String, description: String = null): Lens[IN, OUT] = {
+    val meta = Meta(false, location, paramMeta, name, description)
+    new Lens(meta, it => {
+      val out = get(name)(it)
+      if (out.isEmpty) throw LensFailure(null, Missing(meta)) else out.head
+    })
+    //
+    //open val multi = object : MultiLensSpec<IN, OUT> {
+    ///**
+    //  * Make a concrete Lens for this spec that falls back to the default list of values if no values are found in the target.
+    //  */
+    //override fun defaulted(name: String, default: List<OUT>, description: String?): Lens<IN, List<OUT>> {
+    //val meta = Meta(false, location, paramMeta, name, description)
+    //val getLens = get(name)
+    //return Lens(meta, { getLens(it).let { if (it.isEmpty()) default else it } })
+    //}
+    //
+    ///**
+    //  * Make a concrete Lens for this spec that looks for an optional list of values in the target.
+    //  */
+    //override fun optional(name: String, description: String?): Lens<IN, List<OUT>?> {
+    //val meta = Meta(false, location, paramMeta, name, description)
+    //val getLens = get(name)
+    //return Lens(meta, { getLens(it).let { if (it.isEmpty()) null else it } })
+    //}
+    //
+    ///**
+    //  * Make a concrete Lens for this spec that looks for a required list of values in the target.
+    //  */
+    //override fun required(name: String, description: String?): Lens<IN, List<OUT>> {
+    //val meta = Meta(true, location, paramMeta, name, description)
+    //val getLens = get(name)
+    //return Lens(meta, { getLens(it).let { if (it.isEmpty()) throw LensFailure(Missing(meta)) else it } })
+    //}
+    //}
+  }
 }
 
