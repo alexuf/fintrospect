@@ -3,7 +3,7 @@ package lens
 import lens.Failure.Type
 
 abstract sealed class Failure(val fType: Failure.Type.Type) {
-  abstract val meta: Meta
+  val meta: Meta
 }
 
 object Failure {
@@ -41,5 +41,5 @@ case class LensFailure(failures: List[Failure], cause: Exception = null) extends
 }
 
 object LensFailure {
-  def apply(cause: Exception, failures: Failure*) = LensFailure(failures.toList, cause)
+  def apply(cause: Exception, failures: Failure*): LensFailure = LensFailure(failures.toList, cause)
 }
