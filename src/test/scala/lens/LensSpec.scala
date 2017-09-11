@@ -24,19 +24,6 @@ trait BiDiMultiLensSpec[IN, OUT] extends MultiLensSpec[IN, OUT] {
   override def required(name: String, description: String): BiDiLens[IN, List[OUT]]
 }
 
-
-class LensGet[IN, MID, OUT] private(private val rootFn: (String, IN) => List[MID], private val fn: (MID) => OUT) {
-
-  def apply(name: String): (IN) => List[OUT] = (target: IN) => rootFn(name, target).map(fn)
-
-  def map[NEXT](nextFn: (OUT) => NEXT): LensGet[IN, MID, NEXT] = new LensGet[IN, MID, NEXT](rootFn, (i: MID) => nextFn(fn(i)))
-}
-
-object LensGet {
-  def apply[IN, OUT](rootFn: (String, IN) => List[OUT]): LensGet[IN, OUT, OUT] = new LensGet(rootFn, (i: OUT) => i)
-}
-
-
 /**
   * Represents a uni-directional extraction of an entity from a target.
   */
