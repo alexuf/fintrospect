@@ -127,16 +127,35 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
   def mapWithNewMeta[NEXT](nextIn: (OUT) => NEXT, nextOut: (NEXT) => OUT, paramMeta: ParamType) = new BiDiLensSpec(location, paramMeta, get.map(nextIn), set.map(nextOut))
 
   override def defaulted(name: String, default: OUT, description: String = null): BiDiLens[IN, OUT] = {
-    val meta = Meta(false, location, paramMeta, name, description)
     val getLens = get(name)
     val setLens = set(name)
-    new BiDiLens(meta,
+    new BiDiLens(Meta(false, location, paramMeta, name, description),
       it => {
-          val out = getLens(it)
-          if(out.isEmpty) default else out.head
+        val out = getLens(it)
+        if (out.isEmpty) default else out.head
       },
       (out: OUT, target: IN) => setLens(if (out == null) List() else List(out), target)
     )
   }
+
+  override def optional(name: String, description: String = null): BiDiLens[IN, Option[OUT]] = {
+    val getLens = get(name)
+    val setLens = set(name)
+    new BiDiLens(Meta(false, location, paramMeta, name, description),
+      it => getLens(it).headOption,
+      (out: OUT, target: IN) => setLens(if (out == null) List(out) else List.empty, target)
+    )
+  }
+
+  //
+  //  override def required(name: String, description: String = null): BiDiLens[IN, OUT] {
+  //    val meta = Meta(true, location, paramMeta, name, description)
+  //    val getLens = get(name)
+  //    val setLens = set(name)
+  //    return BiDiLens(meta,
+  //      { getLens(it).firstOrNull() ?: throw LensFailure(Missing(meta)) },
+  //      { out: OUT, target: IN -> setLens(listOf(out), target) })
+  //  }
+
 
 }
