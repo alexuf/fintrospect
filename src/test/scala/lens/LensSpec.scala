@@ -147,15 +147,16 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
     )
   }
 
-  //
-  //  override def required(name: String, description: String = null): BiDiLens[IN, OUT] {
-  //    val meta = Meta(true, location, paramMeta, name, description)
-  //    val getLens = get(name)
-  //    val setLens = set(name)
-  //    return BiDiLens(meta,
-  //      { getLens(it).firstOrNull() ?: throw LensFailure(Missing(meta)) },
-  //      { out: OUT, target: IN -> setLens(listOf(out), target) })
-  //  }
-
-
+  override def required(name: String, description: String = null): BiDiLens[IN, OUT] = {
+    val meta = Meta(true, location, paramMeta, name, description)
+    val getLens = get(name)
+    val setLens = set(name)
+    new BiDiLens(meta,
+      it => {
+        val out = getLens(it)
+        if (out == null) throw LensFailure(null, Missing(meta)) else out.head
+      },
+      (out: OUT, target: IN) => setLens(List(out), target)
+    )
+  }
 }
