@@ -131,7 +131,7 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
     val setLens = set(name)
     new BiDiLens(Meta(false, location, paramMeta, name, description),
       it => {
-        val out = getLens(it)
+        val out = getLens(it).
         if (out.isEmpty) default else out.head
       },
       (out: OUT, target: IN) => setLens(if (out == null) List() else List(out), target)
