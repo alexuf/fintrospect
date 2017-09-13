@@ -3,13 +3,16 @@ package lens
 import java.nio.charset.Charset
 import java.time.format.DateTimeFormatter.{ISO_LOCAL_DATE, ISO_LOCAL_DATE_TIME, ISO_ZONED_DATE_TIME}
 import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
+import java.util
 import java.util.UUID
 
 import com.twitter.finagle.http.{Message, Request}
 import com.twitter.io.{Buf, Bufs}
 import io.fintrospect.ContentType
 import io.fintrospect.parameters.{FileParamType, ParamType, StringParamType}
+import org.jboss.netty.handler.codec.http.QueryStringDecoder
 
+import scala.collection.JavaConverters._
 import scala.util.matching.Regex
 
 class BaseBidiLensSpec[T <: Message](
@@ -53,7 +56,9 @@ object Query extends BaseBidiLensSpec[Request]("query", StringParamType,
   new LensSet[Request, String, String](
     (name: String, values: Seq[String], target: Request) => values.foldLeft(target) {
       (m: Request, next: String) => {
-        m.params.+(name -> next)
+        val parameters: util.Map[String, util.List[String]] = new QueryStringDecoder(m.uri).getParameters
+        val asdas = parameters.asScala.flatMap(it => it._2.asScala.map(it._1 -> _)).toList ++ List(name -> next)
+        m.uri(Request.queryString(m.path, asdas: _*))
         m
       }
     }, identity[String])
@@ -65,7 +70,7 @@ object Header extends BaseBidiLensSpec[Message]("header", StringParamType,
   new LensSet[Message, String, String](
     (name: String, values: Seq[String], target: Message) => values.foldLeft(target) {
       (m: Message, next: String) => {
-        m.headerMap.+(name -> next)
+        m.headerMap.add(name, next)
         m
       }
     }, identity[String])
