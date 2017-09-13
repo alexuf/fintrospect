@@ -131,7 +131,7 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
     val setLens = set(name)
     new BiDiLens(Meta(false, location, paramMeta, name, description),
       it => {
-        val out = getLens(it).
+        val out = getLens(it)
         if (out.isEmpty) default else out.head
       },
       (out: OUT, target: IN) => setLens(if (out == null) List() else List(out), target)
@@ -143,7 +143,11 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
     val setLens = set(name)
     new BiDiLens(Meta(false, location, paramMeta, name, description),
       it => getLens(it).headOption,
-      (out: OUT, target: IN) => setLens(if (out == null) List(out) else List.empty, target)
+      (out: Option[OUT], target: IN) => setLens(
+        out match {
+          case Some(it) => List(it)
+          case None => List.empty
+        }, target)
     )
   }
 
@@ -154,9 +158,52 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
     new BiDiLens(meta,
       it => {
         val out = getLens(it)
-        if (out == null) throw LensFailure(null, Missing(meta)) else out.head
+        if (out.isEmpty) throw LensFailure(null, Missing(meta)) else out.head
       },
       (out: OUT, target: IN) => setLens(List(out), target)
     )
   }
+
+  override object multi extends BiDiMultiLensSpec[IN, OUT] {
+    override def defaulted(name: String, default: List[OUT], description: String = null): BiDiLens[IN, List[OUT]] = {
+      val getLens = get(name)
+      val setLens = set(name)
+      new BiDiLens(Meta(false, location, paramMeta, name, description),
+        it => {
+          val out = getLens(it)
+          if (out.isEmpty) default else out
+        },
+        (out: List[OUT], target: IN) => setLens(if (out == null) List() else out, target)
+      )
+    }
+
+    override def optional(name: String, description: String = null): BiDiLens[IN, Option[List[OUT]]] = {
+      val getLens = get(name)
+      val setLens = set(name)
+      new BiDiLens(Meta(false, location, paramMeta, name, description),
+        it => {
+          val out = getLens(it)
+          if (out.isEmpty) Some(out) else None
+        },
+        (out: Option[List[OUT]], target: IN) => setLens(out match {
+          case Some(it) => it
+          case None => List.empty
+        }, target)
+      )
+    }
+
+    override def required(name: String, description: String = null): BiDiLens[IN, List[OUT]] = {
+      val meta = Meta(true, location, paramMeta, name, description)
+      val getLens = get(name)
+      val setLens = set(name)
+      new BiDiLens(meta,
+        it => {
+          val out = getLens(it)
+          if (out.isEmpty) throw LensFailure(null, Missing(meta)) else out
+        },
+        (out: List[OUT], target: IN) => setLens(out, target)
+      )
+    }
+  }
+
 }
