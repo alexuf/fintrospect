@@ -7,12 +7,20 @@ trait LensInjector[IN, OUT] {
   def apply[R <: IN](value: OUT, target: R): R
 
   /**
-    * Lens operation to set the value into the target. Synomym for invoke(OUT, IN)
+    * Lens operation to set the value into the target. Synomym for apply(OUT, IN)
     */
   def inject[R <: IN](value: OUT, target: R): R = apply(value, target)
 
   /**
-    * Bind this Lens to a value, so we can set it into a target
+    * Lens operation to set the value into the target. Synomym for apply(OUT, IN)
     */
-  def of[R <: IN](value: OUT): (R) => R = apply(value, _)
+  def -->[R <: IN](value: OUT): (R) => R = apply(value, _)
+}
+
+object Injector {
+  implicit class Injector[T](r: T) {
+    def inject(a: ((T) => T)*) = a.foldLeft(r) {
+      (memo, next) => next(memo)
+    }
+  }
 }

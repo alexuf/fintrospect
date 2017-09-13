@@ -21,6 +21,8 @@ class BaseBidiLensSpec[T <: Message](
 
   def string(): BiDiLensSpec[T, String, String] = this
 
+  def char(): BiDiLensSpec[T, String, Char] = this.map((s: String) => s.charAt(0), _.toString)
+
   def nonEmptyString(): BiDiLensSpec[T, String, String] = this.map(nonEmpty, nonEmpty)
 
   def int(): BiDiLensSpec[T, String, Int] = this.map(_.toInt, _.toString)
@@ -55,7 +57,8 @@ object Query extends BaseBidiLensSpec[Request]("query", StringParamType,
         m
       }
     }, identity[String])
-)
+) {
+}
 
 object Header extends BaseBidiLensSpec[Message]("header", StringParamType,
   new LensGet[Message, String, String]((name: String, target: Message) => target.headerMap.getAll(name), identity[String]),
