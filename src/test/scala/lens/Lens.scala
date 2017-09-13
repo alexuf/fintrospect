@@ -5,7 +5,7 @@ package lens
   * A Lens provides the uni-directional extraction of an entity from a target.
   */
 class Lens[IN, FINAL](val meta: Meta,
-                      private val get: (IN) => FINAL) extends LensExtractor[IN, FINAL] with Iterable[Meta] {
+                      protected val get: (IN) => FINAL) extends LensExtractor[IN, FINAL] with Iterable[Meta] {
 
   override def iterator(): Iterator[Meta] = List(meta).iterator
 
