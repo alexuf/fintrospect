@@ -6,7 +6,7 @@ import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
 import java.util.UUID
 
 import com.twitter.finagle.http.{Message, Request}
-import com.twitter.io.Buf
+import com.twitter.io.{Buf, Bufs}
 import io.fintrospect.ContentType
 import io.fintrospect.parameters.{FileParamType, ParamType, StringParamType}
 
@@ -87,16 +87,17 @@ object Body {
   }
 
   def string(contentType: ContentType, description: String = null,
-             contentNegotiation: ContentNegotiation = ContentNegotiation.None): BodyLensSpec[String] = {
-    root(List(Meta(true, "body", StringParamType, "body", description)), contentType).map(Buf.decodeString(_, Charset.defaultCharset()))
+             contentNegotiation: ContentNegotiation = ContentNegotiation.None): BiDiBodyLensSpec[String] =
+    root(List(Meta(true, "body", StringParamType, "body", description)), contentType)
+      .map((b: Buf) => Buf.decodeString(b, Charset.defaultCharset()), Bufs.utf8Buf)
+
+  def nonEmptyString(contentType: ContentType, description: String = null,
+                     contentNegotiation: ContentNegotiation = ContentNegotiation.None): BodyLensSpec[String] = {
+    string(contentType, description, contentNegotiation).map(
+      (value: String) => if (value.isEmpty) throw new IllegalArgumentException() else value,
+      identity[String]
+    )
   }
-//
-//  def nonEmptyString(contentType: ContentType, description: String = null,
-//                     contentNegotiation: ContentNegotiation = ContentNegotiation.None): BodyLensSpec[String] = {
-//    string(contentType, description, contentNegotiation).map(
-//       (value: String) => if (value.isEmpty) throw new IllegalArgumentException() else value
-//      , (s: String) => s)
-//  }
 
   def binary(contentType: ContentType, description: String = null, contentNegotiation: ContentNegotiation = ContentNegotiation.None) = {
     root(List(Meta(true, "body", FileParamType, "body", description)), contentType)
