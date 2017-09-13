@@ -1,10 +1,10 @@
 package lens
 
 import com.twitter.finagle.http.Message
-import com.twitter.io.Buf.ByteBuffer
+import com.twitter.io.Buf
 import io.fintrospect.ContentType
 
-class BodyLensSpec[OUT](val metas: List[Meta], val contentType: ContentType, val get: LensGet[Message, ByteBuffer, OUT]) {
+class BodyLensSpec[OUT](val metas: List[Meta], val contentType: ContentType, val get: LensGet[Message, Buf, OUT]) {
   /**
     * Create a lens for this Spec
     */
@@ -24,8 +24,8 @@ class BodyLensSpec[OUT](val metas: List[Meta], val contentType: ContentType, val
   * Represents a bi-directional extraction of an entity from a target Body, or an insertion into a target Body.
   */
 class BiDiBodyLensSpec[OUT](metas: List[Meta], contentType: ContentType,
-                            get: LensGet[Message, ByteBuffer, OUT],
-                            private val set: LensSet[Message, ByteBuffer, OUT])
+                            get: LensGet[Message, Buf, OUT],
+                            private val set: LensSet[Message, Buf, OUT])
   extends BodyLensSpec[OUT](metas, contentType, get) {
 
   /**
