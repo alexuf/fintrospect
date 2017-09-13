@@ -12,9 +12,8 @@ class BodyLens[FINAL](val metas: List[Meta], val contentType: ContentType, priva
   }
 }
 
-class BiDiBodyLens[FINAL](meta: Meta, get: (Message) => FINAL, private val set: (FINAL, Message) => Message)
-  extends Lens[Message, FINAL](meta, get) with LensInjector[Message, FINAL] {
+class BiDiBodyLens[FINAL](meta: List[Meta], contentType: ContentType, get: (Message) => FINAL, private val set: (FINAL, Message) => Message)
+  extends BodyLens[FINAL](meta, contentType, get) with LensInjector[Message, FINAL] {
 
   override def apply[R <: Message](value: FINAL, target: R): R = set(value, target).asInstanceOf[R]
 }
-

@@ -1,12 +1,12 @@
 package lens
 
-class LensGet[IN, MID, OUT] private(private val rootFn: (String, IN) => List[MID], private val fn: (MID) => OUT) {
+class LensGet[IN, MID, OUT] (private val rootFn: (String, IN) => Seq[MID], private val fn: (MID) => OUT) {
 
-  def apply(name: String): (IN) => List[OUT] = (target: IN) => rootFn(name, target).map(fn)
+  def apply(name: String): (IN) => Seq[OUT] = (target: IN) => rootFn(name, target).map(fn)
 
   def map[NEXT](nextFn: (OUT) => NEXT): LensGet[IN, MID, NEXT] = new LensGet[IN, MID, NEXT](rootFn, (i: MID) => nextFn(fn(i)))
 }
 
 object LensGet {
-  def apply[IN, OUT](rootFn: (String, IN) => List[OUT]): LensGet[IN, OUT, OUT] = new LensGet(rootFn, (i: OUT) => i)
+  def apply[IN, OUT](rootFn: (String, IN) => Seq[OUT]): LensGet[IN, OUT, OUT] = new LensGet(rootFn, (i: OUT) => i)
 }

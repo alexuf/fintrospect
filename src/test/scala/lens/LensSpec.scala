@@ -3,14 +3,14 @@ package lens
 import io.fintrospect.parameters.ParamType
 
 /**
-  * Represents a uni-directional extraction of a list of entities from a target.
+  * Represents a uni-directional extraction of a Seq of entities from a target.
   */
 trait MultiLensSpec[IN, OUT] {
-  def defaulted(name: String, default: List[OUT], description: String = null): Lens[IN, List[OUT]]
+  def defaulted(name: String, default: Seq[OUT], description: String = null): Lens[IN, Seq[OUT]]
 
-  def optional(name: String, description: String = null): Lens[IN, Option[List[OUT]]]
+  def optional(name: String, description: String = null): Lens[IN, Option[Seq[OUT]]]
 
-  def required(name: String, description: String = null): Lens[IN, List[OUT]]
+  def required(name: String, description: String = null): Lens[IN, Seq[OUT]]
 }
 
 /**
@@ -51,7 +51,7 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
     * Make a concrete Lens for this spec that looks for a required value in the target.
     */
   def required(name: String, description: String = null): Lens[IN, OUT] = {
-    val meta = Meta(false, location, paramMeta, name, description)
+    val meta = Meta(true, location, paramMeta, name, description)
     val getLens = get(name)
     new Lens(meta, (it: IN) => {
       val out = getLens(it)
@@ -61,9 +61,9 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
 
   val multi = new MultiLensSpec[IN, OUT] {
     /**
-      * Make a concrete Lens for this spec that falls back to the default list of values if no values are found in the target.
+      * Make a concrete Lens for this spec that falls back to the default Seq of values if no values are found in the target.
       */
-    override def defaulted(name: String, default: List[OUT], description: String = null): Lens[IN, List[OUT]] = {
+    override def defaulted(name: String, default: Seq[OUT], description: String = null): Lens[IN, Seq[OUT]] = {
       val getLens = get(name)
       new Lens(Meta(false, location, paramMeta, name, description), (it: IN) => {
         val out = getLens(it)
@@ -72,9 +72,9 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
     }
 
     /**
-      * Make a concrete Lens for this spec that looks for an optional list of values in the target.
+      * Make a concrete Lens for this spec that looks for an optional Seq of values in the target.
       */
-    override def optional(name: String, description: String = null): Lens[IN, Option[List[OUT]]] = {
+    override def optional(name: String, description: String = null): Lens[IN, Option[Seq[OUT]]] = {
       val meta = Meta(false, location, paramMeta, name, description)
       val getLens = get(name)
       new Lens(meta, (it: IN) => {
@@ -84,9 +84,9 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
     }
 
     /**
-      * Make a concrete Lens for this spec that looks for a required list of values in the target.
+      * Make a concrete Lens for this spec that looks for a required Seq of values in the target.
       */
-    override def required(name: String, description: String = null): Lens[IN, List[OUT]] = {
+    override def required(name: String, description: String = null): Lens[IN, Seq[OUT]] = {
       val meta = Meta(true, location, paramMeta, name, description)
       val getLens = get(name)
       new Lens(meta, (it: IN) => {
@@ -99,14 +99,14 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
 
 
 /**
-  * Represents a bi-directional extraction of a list of entities from a target, or an insertion into a target.
+  * Represents a bi-directional extraction of a Seq of entities from a target, or an insertion into a target.
   */
 trait BiDiMultiLensSpec[IN, OUT] extends MultiLensSpec[IN, OUT] {
-  override def defaulted(name: String, default: List[OUT], description: String): BiDiLens[IN, List[OUT]]
+  override def defaulted(name: String, default: Seq[OUT], description: String): BiDiLens[IN, Seq[OUT]]
 
-  override def optional(name: String, description: String): BiDiLens[IN, Option[List[OUT]]]
+  override def optional(name: String, description: String): BiDiLens[IN, Option[Seq[OUT]]]
 
-  override def required(name: String, description: String): BiDiLens[IN, List[OUT]]
+  override def required(name: String, description: String): BiDiLens[IN, Seq[OUT]]
 }
 
 /**
@@ -134,7 +134,7 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
         val out = getLens(it)
         if (out.isEmpty) default else out.head
       },
-      (out: OUT, target: IN) => setLens(if (out == null) List() else List(out), target)
+      (out: OUT, target: IN) => setLens(if (out == null) Seq() else Seq(out), target)
     )
   }
 
@@ -145,8 +145,8 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
       it => getLens(it).headOption,
       (out: Option[OUT], target: IN) => setLens(
         out match {
-          case Some(it) => List(it)
-          case None => List.empty
+          case Some(it) => Seq(it)
+          case None => Seq.empty
         }, target)
     )
   }
@@ -160,12 +160,12 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
         val out = getLens(it)
         if (out.isEmpty) throw LensFailure(null, Missing(meta)) else out.head
       },
-      (out: OUT, target: IN) => setLens(List(out), target)
+      (out: OUT, target: IN) => setLens(Seq(out), target)
     )
   }
 
   override object multi extends BiDiMultiLensSpec[IN, OUT] {
-    override def defaulted(name: String, default: List[OUT], description: String = null): BiDiLens[IN, List[OUT]] = {
+    override def defaulted(name: String, default: Seq[OUT], description: String = null): BiDiLens[IN, Seq[OUT]] = {
       val getLens = get(name)
       val setLens = set(name)
       new BiDiLens(Meta(false, location, paramMeta, name, description),
@@ -173,11 +173,11 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
           val out = getLens(it)
           if (out.isEmpty) default else out
         },
-        (out: List[OUT], target: IN) => setLens(if (out == null) List() else out, target)
+        (out: Seq[OUT], target: IN) => setLens(if (out == null) Seq() else out, target)
       )
     }
 
-    override def optional(name: String, description: String = null): BiDiLens[IN, Option[List[OUT]]] = {
+    override def optional(name: String, description: String = null): BiDiLens[IN, Option[Seq[OUT]]] = {
       val getLens = get(name)
       val setLens = set(name)
       new BiDiLens(Meta(false, location, paramMeta, name, description),
@@ -185,14 +185,14 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
           val out = getLens(it)
           if (out.isEmpty) Some(out) else None
         },
-        (out: Option[List[OUT]], target: IN) => setLens(out match {
+        (out: Option[Seq[OUT]], target: IN) => setLens(out match {
           case Some(it) => it
-          case None => List.empty
+          case None => Seq.empty
         }, target)
       )
     }
 
-    override def required(name: String, description: String = null): BiDiLens[IN, List[OUT]] = {
+    override def required(name: String, description: String = null): BiDiLens[IN, Seq[OUT]] = {
       val meta = Meta(true, location, paramMeta, name, description)
       val getLens = get(name)
       val setLens = set(name)
@@ -201,7 +201,7 @@ class BiDiLensSpec[IN, MID, OUT](location: String,
           val out = getLens(it)
           if (out.isEmpty) throw LensFailure(null, Missing(meta)) else out
         },
-        (out: List[OUT], target: IN) => setLens(out, target)
+        (out: Seq[OUT], target: IN) => setLens(out, target)
       )
     }
   }
