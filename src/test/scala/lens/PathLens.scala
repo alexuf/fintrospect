@@ -2,15 +2,18 @@ package lens
 
 import com.twitter.finagle.http.Request
 import io.fintrospect.parameters.ParamType
+import io.fintrospect.util.PathSegmentEncoderDecoder.decode
 
-abstract class PathLens[FINAL](meta: Meta, get: (String) => FINAL)
+import scala.util.Try
+
+class PathLens[FINAL](meta: Meta, get: (String) => FINAL)
   extends Lens[String, FINAL](meta, get) {
   override def toString(): String = "{${meta.name}}"
 
-  def unapply(str: String): Option[FINAL]
+  def unapply(str: String): Option[FINAL] = Option(str).flatMap(s => Try(get(decode(s))).toOption)
 }
 
-abstract class BiDiPathLens[FINAL](meta: Meta, get: (String) => FINAL, private val set: (FINAL, Request) => Request)
+class BiDiPathLens[FINAL](meta: Meta, get: (String) => FINAL, private val set: (FINAL, Request) => Request)
   extends PathLens[FINAL](meta, get) with LensInjector[FINAL, Request] {
   override def apply[R <: FINAL](value: Request, target: R): R = set(target, value).asInstanceOf[R]
 }
@@ -20,9 +23,7 @@ class PathLensSpec[OUT](protected val paramType: ParamType, protected val get: L
   def of(name: String, description: String = null): PathLens[OUT] = {
     val getLens = get(name)
     val meta = Meta(true, "path", paramType, name, description)
-    new PathLens(meta, getLens(_).headOption.getOrElse(throw LensFailure(null, Missing(meta)))) {
-      override def unapply(str: String): Option[OUT] = ???
-    }
+    new PathLens(meta, getLens(_).headOption.getOrElse(throw LensFailure(null, Missing(meta))))
   }
 
   def map[NEXT](nextIn: (OUT) => NEXT) = new PathLensSpec(paramType, get.map(nextIn))
@@ -48,8 +49,6 @@ class BiDiPathLensSpec[OUT](paramType: ParamType,
 
     new BiDiPathLens(meta,
       getLens(_).headOption.getOrElse(throw LensFailure(null, Missing(meta))),
-      (out: OUT, target: Request) => setLens(List(out), target)) {
-      def unapply(str: String): Option[OUT] = ???
-    }
+      (out: OUT, target: Request) => setLens(List(out), target))
   }
 }
