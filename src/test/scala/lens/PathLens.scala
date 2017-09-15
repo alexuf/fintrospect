@@ -10,8 +10,8 @@ abstract class PathLens[FINAL](meta: Meta, get: (String) => FINAL)
   def unapply(str: String): Option[FINAL]
 }
 
-class BiDiPathLens[FINAL](meta: Meta, get: (String) => FINAL, private val set: (FINAL, Request) => Request)
-  extends LensInjector[FINAL, Request] {
+abstract class BiDiPathLens[FINAL](meta: Meta, get: (String) => FINAL, private val set: (FINAL, Request) => Request)
+  extends PathLens[FINAL](meta, get) with LensInjector[FINAL, Request] {
   override def apply[R <: FINAL](value: Request, target: R): R = set(target, value).asInstanceOf[R]
 }
 
@@ -38,4 +38,18 @@ class BiDiPathLensSpec[OUT](paramType: ParamType,
     new BiDiPathLensSpec(newParamType, get.map(nextIn), set.map(nextOut))
 
   def map[NEXT](nextIn: (OUT) => NEXT, nextOut: (NEXT) => OUT): BiDiPathLensSpec[NEXT] = mapWithNewType(nextIn, nextOut, paramType)
+
+
+  override def of(name: String, description: String = null): BiDiPathLens[OUT] = {
+    val getLens = get(name)
+    val setLens = set(name)
+
+    val meta = Meta(true, "path", paramType, name, description)
+
+    new BiDiPathLens(meta,
+      getLens(_).headOption.getOrElse(throw LensFailure(null, Missing(meta))),
+      (out: OUT, target: Request) => setLens(List(out), target)) {
+      def unapply(str: String): Option[OUT] = ???
+    }
+  }
 }
