@@ -4,7 +4,7 @@ import com.twitter.finagle.http.path.{->, /, Path}
 import com.twitter.finagle.http.{Method, Request, Response}
 import com.twitter.finagle.{Filter, Service}
 import io.fintrospect.RouteModule.ModifyPath
-import io.fintrospect.UnboundRoute.{clientFor, proxyFor}
+import io.fintrospect.UnboundRoute.clientFor
 import io.fintrospect.parameters.{PathBindable, PathParameter, Path => Fp}
 
 /**
@@ -19,14 +19,6 @@ object UnboundRoute {
                                      pp: PathParameter[_]*): RouteClient[Rsp] = {
     new RouteClient(ip.method, ip.routeSpec, Fp.fixed(ip.pathFn(Path("")).toString) +: pp, service)
   }
-
-  private[fintrospect] def proxyFor[T](ip: UnboundRoute, service: Service[Request, Response]): Service[Request, Response] =
-    Service.mk {
-      request: Request => {
-        val bindings = ip.routeSpec.body.map(b => b.rebind(request)).getOrElse(Nil) ++ ip.routeSpec.requestParams.flatMap(p => p.rebind(request))
-        service(bindings.foldLeft(RequestBuilder(ip.method, request.path.split("/"))) { (builder, binding) => binding(builder) }.build())
-      }
-    }
 }
 
 trait UnboundRoute {
@@ -62,7 +54,7 @@ class UnboundRoute0(val routeSpec: RouteSpec, val method: Method, val pathFn: Mo
     }
   }
 
-  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo(proxyFor(this, service))
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo(service)
 
   override  def bindToClient[Rsp](service: Service[Request, Rsp]): RouteClient[Rsp] = clientFor(this, service)
 
@@ -89,7 +81,7 @@ class UnboundRoute1[A](val routeSpec: RouteSpec, val method: Method, val pathFn:
 
   override  def bindToClient[Rsp](service: Service[Request, Rsp]): RouteClient[Rsp] = clientFor(this, service, pp1)
 
-  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo(_ => proxyFor(this, service))
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo(_ => service)
 
   def reverseRouter(root: Path): (A) => Path = {
     val router = new ReverseRouter(root, this, pp1)
@@ -115,7 +107,7 @@ class UnboundRoute2[A, B](val routeSpec: RouteSpec, val method: Method, val path
 
   override  def bindToClient[Rsp](service: Service[Request, Rsp]): RouteClient[Rsp] = clientFor(this, service, pp1, pp2)
 
-  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _) => proxyFor(this, service))
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _) => service)
 
   def reverseRouter(root: Path): (A, B) => Path = {
     val router = new ReverseRouter(root, this, pp1, pp2)
@@ -142,7 +134,7 @@ class UnboundRoute3[A, B, C](val routeSpec: RouteSpec, val method: Method, val p
 
   override  def bindToClient[Rsp](service: Service[Request, Rsp]): RouteClient[Rsp] = clientFor(this, service, pp1, pp2, pp3)
 
-  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _) => proxyFor(this, service))
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _) => service)
 
   def reverseRouter(root: Path): (A, B, C) => Path = {
     val router = new ReverseRouter(root, this, pp1, pp2, pp3)
@@ -171,7 +163,7 @@ class UnboundRoute4[A, B, C, D](val routeSpec: RouteSpec, val method: Method, va
 
   override  def bindToClient[Rsp](service: Service[Request, Rsp]): RouteClient[Rsp] = clientFor(this, service, pp1, pp2, pp3, pp4)
 
-  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _) => proxyFor(this, service))
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _) => service)
 }
 
 /**
@@ -196,7 +188,7 @@ class UnboundRoute5[A, B, C, D, E](val routeSpec: RouteSpec, val method: Method,
 
   override  def bindToClient[Rsp](service: Service[Request, Rsp]): RouteClient[Rsp] = clientFor(this, service, pp1, pp2, pp3, pp4, pp5)
 
-  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _, _) => proxyFor(this, service))
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _, _) => service)
 }
 
 /**
@@ -222,7 +214,7 @@ class UnboundRoute6[A, B, C, D, E, F](val routeSpec: RouteSpec, val method: Meth
 
   override  def bindToClient[Rsp](service: Service[Request, Rsp]): RouteClient[Rsp] = clientFor(this, service, pp1, pp2, pp3, pp4, pp5, pp6)
 
-  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _, _, _) => proxyFor(this, service))
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _, _, _) => service)
 }
 
 /**
@@ -245,5 +237,5 @@ class UnboundRoute7[A, B, C, D, E, F, G](val routeSpec: RouteSpec, val method: M
 
   override  def bindToClient[Rsp](service: Service[Request, Rsp]): RouteClient[Rsp] = clientFor(this, service, pp1, pp2, pp3, pp4, pp5, pp6, pp7)
 
-  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _, _, _, _) => proxyFor(this, service))
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _, _, _, _) => service)
 }

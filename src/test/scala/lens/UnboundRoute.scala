@@ -18,6 +18,8 @@ trait UnboundRoute {
   val routeSpec: RouteSpec
   val method: Method
   val pathFn: ModifyPath
+
+  def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response]
 }
 
 /**
@@ -41,6 +43,8 @@ class UnboundRoute0(val routeSpec: RouteSpec, val method: Method, val pathFn: Mo
       case actualMethod -> path if matches(actualMethod, basePath, path) => filter.andThen(fn())
     }
   }
+
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo(service)
 }
 
 /**
@@ -58,6 +62,7 @@ class UnboundRoute1[A](val routeSpec: RouteSpec, val method: Method, val pathFn:
     }
   }
 
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo(_ => service)
 }
 
 /**
@@ -75,6 +80,8 @@ class UnboundRoute2[A, B](val routeSpec: RouteSpec, val method: Method, val path
       case actualMethod -> path / pp1(s1) / pp2(s2) if matches(actualMethod, basePath, path) => filter.andThen(fn(s1, s2))
     }
   }
+
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _) => service)
 }
 
 /**
@@ -93,6 +100,8 @@ class UnboundRoute3[A, B, C](val routeSpec: RouteSpec, val method: Method, val p
       case actualMethod -> path / pp1(s1) / pp2(s2) / pp3(s3) if matches(actualMethod, basePath, path) => filter.andThen(fn(s1, s2, s3))
     }
   }
+
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _) => service)
 }
 
 /**
@@ -113,6 +122,8 @@ class UnboundRoute4[A, B, C, D](val routeSpec: RouteSpec, val method: Method, va
       case actualMethod -> path / pp1(s1) / pp2(s2) / pp3(s3) / pp4(s4) if matches(actualMethod, basePath, path) => filter.andThen(fn(s1, s2, s3, s4))
     }
   }
+
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _) => service)
 }
 
 /**
@@ -134,6 +145,8 @@ class UnboundRoute5[A, B, C, D, E](val routeSpec: RouteSpec, val method: Method,
       case actualMethod -> path / pp1(s1) / pp2(s2) / pp3(s3) / pp4(s4) / pp5(s5) if matches(actualMethod, basePath, path) => filter.andThen(fn(s1, s2, s3, s4, s5))
     }
   }
+
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _, _) => service)
 }
 
 /**
@@ -156,6 +169,8 @@ class UnboundRoute6[A, B, C, D, E, F](val routeSpec: RouteSpec, val method: Meth
       case actualMethod -> path / pp1(s1) / pp2(s2) / pp3(s3) / pp4(s4) / pp5(s5) / pp6(s6) if matches(actualMethod, basePath, path) => filter.andThen(fn(s1, s2, s3, s4, s5, s6))
     }
   }
+
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _, _, _) => service)
 }
 
 /**
@@ -175,4 +190,6 @@ class UnboundRoute7[A, B, C, D, E, F, G](val routeSpec: RouteSpec, val method: M
       case actualMethod -> path / pp1(s1) / pp2(s2) / pp3(s3) / pp4(s4) / pp5(s5) / pp6(s6) / pp7(s7) if matches(actualMethod, basePath, path) => filter.andThen(fn(s1, s2, s3, s4, s5, s6, s7))
     }
   }
+
+  override def bindToProxy(service: Service[Request, Response]): ServerRoute[Request, Response] = bindTo((_, _, _, _, _, _, _) => service)
 }
