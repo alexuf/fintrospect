@@ -9,11 +9,13 @@ import java.util.UUID
 import com.twitter.finagle.http.{Message, Request}
 import com.twitter.io.{Buf, Bufs}
 import io.fintrospect.ContentType
+import io.fintrospect.ContentTypes.APPLICATION_XML
 import io.fintrospect.parameters.{FileParamType, ParamType, StringParamType}
 import org.jboss.netty.handler.codec.http.QueryStringDecoder
 
 import scala.collection.JavaConverters._
 import scala.util.matching.Regex
+import scala.xml.{Elem, XML}
 
 class BaseBidiLensSpec[T <: Message](
                                       location: String,
@@ -110,4 +112,7 @@ object Body {
   def binary(contentType: ContentType, description: String = null, contentNegotiation: ContentNegotiation = ContentNegotiation.None) = {
     root(List(Meta(true, "body", FileParamType, "body", description)), contentType)
   }
+
+  def xml(description: String = null, contentNegotiation: ContentNegotiation = ContentNegotiation.None) =
+    string(APPLICATION_XML, description, contentNegotiation).map[Elem]((s: String) => XML.loadString(s), _.toString())
 }
