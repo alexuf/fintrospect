@@ -19,5 +19,4 @@ object Query extends BaseBidiLensSpec[Request]("query", StringParamType,
         m
       }
     }, identity[String])
-) {
-}
+)

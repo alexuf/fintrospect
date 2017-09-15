@@ -26,7 +26,7 @@ class PathLensSpec[OUT](protected val paramType: ParamType, get: LensGet[String,
 
 class BiDiPathLensSpec[OUT](paramType: ParamType,
                             get: LensGet[String, String, OUT],
-                            private val set: LensSet[String, String, OUT])
+                            private val set: LensSet[Request, String, OUT])
   extends PathLensSpec[OUT](paramType, get) {
 
   private def mapWithNewType[NEXT](nextIn: (OUT) => NEXT, nextOut: (NEXT) => OUT,
