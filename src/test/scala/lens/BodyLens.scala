@@ -29,7 +29,7 @@ trait ContentNegotiation {
 
 object ContentNegotiation {
 
-  private val meta = Meta(false, "header", StringParamType, "Content-Type")
+  private val meta = Meta(true, "header", StringParamType, "Content-Type")
 
   /**
     * The received Content-type header passed back MUST equal the expected Content-type, including directive
