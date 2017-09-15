@@ -18,6 +18,17 @@ object Path extends BiDiPathLensSpec[String](StringParamType,
       }
     }, identity[String])) {
 
+  def fixed(name: String): PathLens[String] = {
+    val getLens = get(name)
+    val meta = Meta(true, "path", StringParamType, name)
+    new PathLens[String](meta,
+      it => getLens(it).find(_ == name).getOrElse(throw LensFailure(null, Missing(meta)))) {
+      override def toString(): String = name
+
+      def unapply(str: String): Option[String] = if (str == meta.name) Option(str) else None
+    }
+  }
+
   def string(): BiDiPathLensSpec[String] = this
 
   def char(): BiDiPathLensSpec[Char] = this.map((s: String) => s.charAt(0), _.toString)

@@ -3,9 +3,11 @@ package lens
 import com.twitter.finagle.http.Request
 import io.fintrospect.parameters.ParamType
 
-class PathLens[FINAL](meta: Meta, get: (String) => FINAL)
+abstract class PathLens[FINAL](meta: Meta, get: (String) => FINAL)
   extends Lens[String, FINAL](meta, get) {
   override def toString(): String = "{${meta.name}}"
+
+  def unapply(str: String): Option[FINAL]
 }
 
 class BiDiPathLens[FINAL](meta: Meta, get: (String) => FINAL, private val set: (FINAL, Request) => Request)
@@ -13,12 +15,14 @@ class BiDiPathLens[FINAL](meta: Meta, get: (String) => FINAL, private val set: (
   override def apply[R <: FINAL](value: Request, target: R): R = set(target, value).asInstanceOf[R]
 }
 
-class PathLensSpec[OUT](protected val paramType: ParamType, get: LensGet[String, String, OUT]) {
+class PathLensSpec[OUT](protected val paramType: ParamType, protected val get: LensGet[String, String, OUT]) {
 
   def of(name: String, description: String = null): PathLens[OUT] = {
     val getLens = get(name)
     val meta = Meta(true, "path", paramType, name, description)
-    new PathLens(meta, getLens(_).headOption.getOrElse(throw LensFailure(null, Missing(meta))))
+    new PathLens(meta, getLens(_).headOption.getOrElse(throw LensFailure(null, Missing(meta)))) {
+      override def unapply(str: String): Option[OUT] = ???
+    }
   }
 
   def map[NEXT](nextIn: (OUT) => NEXT) = new PathLensSpec(paramType, get.map(nextIn))

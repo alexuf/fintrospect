@@ -4,7 +4,7 @@ import com.twitter.finagle.http.Message
 import io.fintrospect.ContentType
 import io.fintrospect.parameters.StringParamType
 
-class BodyLens[FINAL](val metas: List[Meta], protected val contentType: ContentType, protected val get: (Message) => FINAL) extends LensExtractor[Message, FINAL] {
+class BodyLens[FINAL](val metas: List[Meta], val contentType: ContentType, protected val get: (Message) => FINAL) extends LensExtractor[Message, FINAL] {
   override def apply(target: Message): FINAL = try {
     get(target)
   } catch {
@@ -47,9 +47,9 @@ object ContentNegotiation {
     new ContentNegotiation {
       override def apply(expected: ContentType, actual: ContentType) {
         if (actual != expected) throw LensFailure(null, Unsupported(meta))
-//        if (expected.value != actual ?
-//        .value
-//        ) throw LensFailure(null, Unsupported(Header.CONTENT_TYPE.head))
+        //        if (expected.value != actual ?
+        //        .value
+        //        ) throw LensFailure(null, Unsupported(Header.CONTENT_TYPE.head))
       }
     }
 
