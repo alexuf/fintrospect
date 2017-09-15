@@ -4,12 +4,11 @@ import java.time.format.DateTimeFormatter.{ISO_LOCAL_DATE, ISO_LOCAL_DATE_TIME, 
 import java.time.{LocalDate, LocalDateTime, ZonedDateTime}
 import java.util.UUID
 
-import com.twitter.finagle.http.Message
 import io.fintrospect.parameters.ParamType
 
 import scala.util.matching.Regex
 
-class BaseBidiLensSpec[T <: Message](
+class BaseBidiLensSpec[T <: Any](
                                       location: String,
                                       paramMeta: ParamType,
                                       get: LensGet[T, String, String],

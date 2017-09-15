@@ -43,5 +43,5 @@ object Body {
   }
 
   def xml(description: String = null, contentNegotiation: ContentNegotiation = ContentNegotiation.None) =
-    string(APPLICATION_XML, description, contentNegotiation).map[Elem]((s: String) => XML.loadString(s), _.toString())
+    string(APPLICATION_XML, description, contentNegotiation).map[Elem]((s: String) => XML.loadString(s), (s: Elem) => s.toString())
 }

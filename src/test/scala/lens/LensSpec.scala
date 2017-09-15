@@ -16,13 +16,13 @@ trait MultiLensSpec[IN, OUT] {
 /**
   * Represents a uni-directional extraction of an entity from a target.
   */
-class LensSpec[IN, MID, OUT](protected val location: String, protected val paramMeta: ParamType, private val get: LensGet[IN, MID, OUT]) {
+class LensSpec[IN, MID, OUT](protected val location: String, protected val paramType: ParamType, private val get: LensGet[IN, MID, OUT]) {
 
   /**
     * Create another LensSpec which applies the uni-directional transformation to the result. Any resultant Lens can only be
     * used to extract the final type from a target.
     */
-  def map[NEXT](nextIn: (OUT) => NEXT) = new LensSpec(location, paramMeta, get.map(nextIn))
+  def map[NEXT](nextIn: (OUT) => NEXT) = new LensSpec(location, paramType, get.map(nextIn))
 
   /**
     * Make a concrete Lens for this spec that falls back to the default value if no value is found in the target.
@@ -30,7 +30,7 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
   def defaulted(name: String, default: OUT, description: String = null): Lens[IN, OUT] = {
 
     val getLens = get(name)
-    new Lens(Meta(false, location, paramMeta, name, description), it => {
+    new Lens(Meta(false, location, paramType, name, description), it => {
       val out = getLens(it)
       if (out.isEmpty) default else out.head
     })
@@ -40,7 +40,7 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
     * Make a concrete Lens for this spec that looks for an optional value in the target.
     */
   def optional(name: String, description: String = null): Lens[IN, Option[OUT]] = {
-    val meta = Meta(false, location, paramMeta, name, description)
+    val meta = Meta(false, location, paramType, name, description)
     val getLens = get(name)
     new Lens(meta, it => {
       getLens(it).headOption
@@ -51,7 +51,7 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
     * Make a concrete Lens for this spec that looks for a required value in the target.
     */
   def required(name: String, description: String = null): Lens[IN, OUT] = {
-    val meta = Meta(true, location, paramMeta, name, description)
+    val meta = Meta(true, location, paramType, name, description)
     val getLens = get(name)
     new Lens(meta, (it: IN) => {
       val out = getLens(it)
@@ -65,7 +65,7 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
       */
     override def defaulted(name: String, default: Seq[OUT], description: String = null): Lens[IN, Seq[OUT]] = {
       val getLens = get(name)
-      new Lens(Meta(false, location, paramMeta, name, description), (it: IN) => {
+      new Lens(Meta(false, location, paramType, name, description), (it: IN) => {
         val out = getLens(it)
         if (out.isEmpty) default else out
       })
@@ -75,7 +75,7 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
       * Make a concrete Lens for this spec that looks for an optional Seq of values in the target.
       */
     override def optional(name: String, description: String = null): Lens[IN, Option[Seq[OUT]]] = {
-      val meta = Meta(false, location, paramMeta, name, description)
+      val meta = Meta(false, location, paramType, name, description)
       val getLens = get(name)
       new Lens(meta, (it: IN) => {
         val out = getLens(it)
@@ -87,7 +87,7 @@ class LensSpec[IN, MID, OUT](protected val location: String, protected val param
       * Make a concrete Lens for this spec that looks for a required Seq of values in the target.
       */
     override def required(name: String, description: String = null): Lens[IN, Seq[OUT]] = {
-      val meta = Meta(true, location, paramMeta, name, description)
+      val meta = Meta(true, location, paramType, name, description)
       val getLens = get(name)
       new Lens(meta, (it: IN) => {
         val out = getLens(it)

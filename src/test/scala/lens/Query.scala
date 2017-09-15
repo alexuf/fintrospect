@@ -6,6 +6,8 @@ import com.twitter.finagle.http.Request
 import io.fintrospect.parameters.StringParamType
 import org.jboss.netty.handler.codec.http.QueryStringDecoder
 
+import scala.collection.JavaConverters._
+
 object Query extends BaseBidiLensSpec[Request]("query", StringParamType,
   new LensGet[Request, String, String]((name: String, target: Request) => target.params.getAll(name).toList, identity[String]),
   new LensSet[Request, String, String](
