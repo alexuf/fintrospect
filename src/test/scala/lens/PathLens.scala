@@ -13,7 +13,7 @@ class BiDiPathLens[FINAL](meta: Meta, get: (String) => FINAL, private val set: (
   override def apply[R <: FINAL](value: Request, target: R): R = set(target, value).asInstanceOf[R]
 }
 
-class PathLensSpec[MID, OUT](protected val paramType: ParamType, get: LensGet[String, MID, OUT]) {
+class PathLensSpec[OUT](protected val paramType: ParamType, get: LensGet[String, String, OUT]) {
 
   def of(name: String, description: String = null): PathLens[OUT] = {
     val getLens = get(name)
@@ -24,3 +24,14 @@ class PathLensSpec[MID, OUT](protected val paramType: ParamType, get: LensGet[St
   def map[NEXT](nextIn: (OUT) => NEXT) = new PathLensSpec(paramType, get.map(nextIn))
 }
 
+class BiDiPathLensSpec[OUT](paramType: ParamType,
+                            get: LensGet[String, String, OUT],
+                            private val set: LensSet[String, String, OUT])
+  extends PathLensSpec[OUT](paramType, get) {
+
+  private def mapWithNewType[NEXT](nextIn: (OUT) => NEXT, nextOut: (NEXT) => OUT,
+                                   newParamType: ParamType): BiDiPathLensSpec[NEXT] =
+    new BiDiPathLensSpec(newParamType, get.map(nextIn), set.map(nextOut))
+
+  def map[NEXT](nextIn: (OUT) => NEXT, nextOut: (NEXT) => OUT): BiDiPathLensSpec[NEXT] = mapWithNewType(nextIn, nextOut, paramType)
+}
